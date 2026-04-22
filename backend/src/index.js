@@ -46,5 +46,5 @@ app.use((err, req, res, next) => {
 
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Embassy API running on http://10.15.1.154:${PORT}`);
+  console.log(`🚀 Embassy API running on http://129.148.50.240:${PORT}`);
 });
