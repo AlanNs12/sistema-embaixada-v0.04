@@ -40,12 +40,10 @@ export default function Layout() {
       {/* Logo */}
       <div className="px-4 py-5 border-b border-gray-200">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Shield size={20} className="text-white" />
-          </div>
+          <img src="" alt="" />
           <div>
-            <p className="font-bold text-gray-900 text-sm leading-tight">Sistema</p>
-            <p className="text-xs text-gray-500">Embaixada</p>
+            <p className="font-bold text-gray-900 text-sm leading-tight">Gestão</p>
+            <p className="text-xs text-gray-500">Embassy of the Phillipines</p>
           </div>
         </div>
       </div>

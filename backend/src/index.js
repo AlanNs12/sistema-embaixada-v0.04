@@ -44,6 +44,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Erro interno do servidor' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Embassy API running on http://localhost:${PORT}`);
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Embassy API running on http://10.15.1.154:${PORT}`);
 });
