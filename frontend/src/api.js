@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Em desenvolvimento aponta direto pro backend; em produção usa URL relativa
 const BASE_URL = import.meta.env.DEV
-  ? 'http://localhost:3001/api'
+  ? 'http://129.148.50.240:3001/api'
   : '/api'
 
 const api = axios.create({ baseURL: BASE_URL })
