@@ -15,9 +15,11 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       allowedHosts: [
-      'embassyphilippines.duckdns.org:5173',
-      'localhost:5173',
-      '127.0.0.1:5173'
+        '177.153.60.36',
+        'embassyphilippines.duckdns.org',
+        'embassyphilippines.duckdns.org:5173',
+        'localhost:5173',
+        '127.0.0.1:5173'
     ],
       proxy: {
         // Todas as chamadas /api são redirecionadas para o backend
