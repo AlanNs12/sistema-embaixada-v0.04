@@ -1,24 +1,4 @@
-# ── Dependências ──────────────────────────────────────────────
-node_modules/
-*/node_modules/
-
-# ── ARQUIVOS DE AMBIENTE — NUNCA commitar ─────────────────────
-# Contêm senhas, IPs, chaves JWT — manter fora do git
-backend/.env
-frontend/.env.local
-frontend/.env.*.local
-
-# ── Build do frontend ─────────────────────────────────────────
-frontend/dist/
-
-# ── Uploads antigos (imagens agora ficam no banco) ────────────
-backend/uploads/
-
-# ── Logs e backups ────────────────────────────────────────────
-scripts/logs/*.log
-scripts/logs/applied_*.done
-scripts/backups/*.sql.gz
-
-# ── Sistema ───────────────────────────────────────────────────
-.DS_Store
-*.zip
+.env
+node_modules
+backend/node_modules/
+frontend/node_modules/
