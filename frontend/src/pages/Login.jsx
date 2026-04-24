@@ -31,7 +31,7 @@ export default function Login() {
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Shield size={32} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Sistema de Controle</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sistema de Controle</h1>
           <p className="text-gray-500 text-sm mt-1">Portaria da Embaixada</p>
         </div>
 

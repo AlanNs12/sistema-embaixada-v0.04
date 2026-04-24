@@ -3,9 +3,12 @@ import api from '../api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import Modal from '../components/Modal'
-import { Plus, LogOut, Camera, Search } from 'lucide-react'
+import DocImage from '../components/DocImage'
+import { Plus, LogOut } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function ServiceProviders() {
+  const { canEdit } = useAuth()
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [visits, setVisits] = useState([])
   const [inside, setInside] = useState([])
@@ -32,15 +35,7 @@ export default function ServiceProviders() {
     } catch (e) { toast.error('Erro ao carregar') }
     finally { setLoading(false) }
   }
-
   useEffect(() => { load() }, [date])
-
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setPhoto(file)
-    setPhotoPreview(URL.createObjectURL(file))
-  }
 
   const handleProviderSelect = (id) => {
     const p = providers.find(p => String(p.id) === id)
@@ -57,43 +52,41 @@ export default function ServiceProviders() {
       toast.success('Entrada registrada!')
       setModalOpen(false)
       setForm({ provider_id: '', visitor_name: '', company: '', reason: '', employee_id: '', notes: '' })
-      setPhoto(null); setPhotoPreview(null)
-      load()
+      setPhoto(null); setPhotoPreview(null); load()
     } catch (e) { toast.error(e.response?.data?.error || 'Erro') }
   }
 
   const handleExit = async (id) => {
-    try {
-      await api.put(`/providers/visits/${id}`, {})
-      toast.success('Saída registrada!')
-      load()
-    } catch (e) { toast.error('Erro') }
+    try { await api.put(`/providers/visits/${id}`, {}); toast.success('Saída registrada!'); load() }
+    catch (e) { toast.error('Erro') }
   }
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Prestadores de Serviço</h1>
-          <p className="text-gray-500 text-sm">Controle de acesso e visitas</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Prestadores de Serviço</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Controle de acesso e visitas</p>
         </div>
         <div className="flex gap-3">
           <input type="date" className="input w-auto" value={date} onChange={e => setDate(e.target.value)} />
-          <button onClick={() => setModalOpen(true)} className="btn-primary"><Plus size={16} /> Registrar Entrada</button>
+          {canEdit && <button onClick={() => setModalOpen(true)} className="btn-primary"><Plus size={16} /> Registrar Entrada</button>}
         </div>
       </div>
 
       {inside.length > 0 && (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-          <p className="text-sm font-medium text-purple-800 mb-2">Prestadores na embaixada agora:</p>
+        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
+          <p className="text-sm font-medium text-purple-800 dark:text-purple-300 mb-2">Prestadores na embaixada agora:</p>
           <div className="flex flex-wrap gap-2">
             {inside.map(p => (
-              <div key={p.id} className="bg-white border border-purple-200 rounded-lg px-3 py-1.5 flex items-center gap-2">
-                <span className="text-sm font-medium">{p.visitor_name}</span>
-                <span className="text-xs text-gray-400">{p.company}</span>
-                <button onClick={() => handleExit(p.id)} className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1">
-                  <LogOut size={12} /> Saída
-                </button>
+              <div key={p.id} className="bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-700 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                <span className="text-sm font-medium dark:text-white">{p.visitor_name}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{p.company}</span>
+                {canEdit && (
+                  <button onClick={() => handleExit(p.id)} className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1">
+                    <LogOut size={12} /> Saída
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -106,25 +99,25 @@ export default function ServiceProviders() {
             <tr><th>Nome</th><th>Empresa</th><th>Motivo</th><th>Funcionário</th><th>Entrada</th><th>Saída</th><th>Doc.</th><th>Status</th></tr>
           </thead>
           <tbody>
-            {loading ? <tr><td colSpan={8} className="text-center py-8 text-gray-400">Carregando...</td></tr>
-              : visits.length === 0 ? <tr><td colSpan={8} className="text-center py-8 text-gray-400">Nenhum registro nesta data</td></tr>
+            {loading
+              ? <tr><td colSpan={8} className="text-center py-8 text-gray-400">Carregando...</td></tr>
+              : visits.length === 0
+              ? <tr><td colSpan={8} className="text-center py-8 text-gray-400">Nenhum registro nesta data</td></tr>
               : visits.map(v => (
                 <tr key={v.id}>
-                  <td className="font-medium">{v.visitor_name}</td>
-                  <td className="text-sm text-gray-500">{v.company || '—'}</td>
-                  <td className="text-sm max-w-[140px] truncate">{v.reason || '—'}</td>
-                  <td className="text-sm">{v.employee_name || '—'}</td>
-                  <td className="font-mono text-xs">{v.entry_time ? format(new Date(v.entry_time), 'HH:mm') : '—'}</td>
-                  <td className="font-mono text-xs">{v.exit_time ? format(new Date(v.exit_time), 'HH:mm') : '—'}</td>
-                  <td>
-                    {v.document_photo
-                      ? <a href={v.document_photo} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-xs flex items-center gap-1"><Camera size={12} />Ver</a>
-                      : <span className="text-gray-300 text-xs">—</span>}
-                  </td>
+                  <td className="font-medium dark:text-white">{v.visitor_name}</td>
+                  <td className="text-sm text-gray-500 dark:text-gray-400">{v.company || '—'}</td>
+                  <td className="text-sm dark:text-gray-300 max-w-[140px] truncate">{v.reason || '—'}</td>
+                  <td className="text-sm dark:text-gray-300">{v.employee_name || '—'}</td>
+                  <td className="font-mono text-xs dark:text-gray-300">{v.entry_time ? format(new Date(v.entry_time), 'HH:mm') : '—'}</td>
+                  <td className="font-mono text-xs dark:text-gray-300">{v.exit_time ? format(new Date(v.exit_time), 'HH:mm') : '—'}</td>
+                  <td><DocImage entityType="provider_visit" entityId={v.id} imageId={v.image_id} /></td>
                   <td>
                     {v.exit_time
                       ? <span className="badge-gray">Saiu</span>
-                      : <button onClick={() => handleExit(v.id)} className="badge-red cursor-pointer hover:bg-red-200">Registrar saída</button>}
+                      : canEdit
+                      ? <button onClick={() => handleExit(v.id)} className="badge-red cursor-pointer hover:bg-red-200 text-xs">Reg. saída</button>
+                      : <span className="badge-purple">Dentro</span>}
                   </td>
                 </tr>
               ))}
@@ -143,29 +136,23 @@ export default function ServiceProviders() {
             </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="form-group">
-              <label className="label">Nome *</label>
-              <input className="input" value={form.visitor_name} onChange={e => setForm({ ...form, visitor_name: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label className="label">Empresa</label>
-              <input className="input" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
-            </div>
+            <div className="form-group"><label className="label">Nome *</label>
+              <input className="input" value={form.visitor_name} onChange={e => setForm({ ...form, visitor_name: e.target.value })} /></div>
+            <div className="form-group"><label className="label">Empresa</label>
+              <input className="input" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} /></div>
           </div>
-          <div className="form-group">
-            <label className="label">Motivo da Visita</label>
-            <input className="input" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label className="label">Funcionário Responsável</label>
+          <div className="form-group"><label className="label">Motivo da Visita</label>
+            <input className="input" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} /></div>
+          <div className="form-group"><label className="label">Funcionário Responsável</label>
             <select className="input" value={form.employee_id} onChange={e => setForm({ ...form, employee_id: e.target.value })}>
               <option value="">Selecione...</option>
               {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
-          </div>
+            </select></div>
           <div className="form-group">
             <label className="label">Foto do Documento</label>
-            <input type="file" accept="image/*" onChange={handlePhotoChange} className="input text-sm" />
+            <input type="file" accept="image/*" capture="environment"
+              onChange={e => { const f = e.target.files[0]; setPhoto(f); setPhotoPreview(f ? URL.createObjectURL(f) : null) }}
+              className="input text-sm dark:text-gray-300" />
             {photoPreview && <img src={photoPreview} alt="doc" className="mt-2 h-24 rounded-lg object-cover border" />}
           </div>
         </div>

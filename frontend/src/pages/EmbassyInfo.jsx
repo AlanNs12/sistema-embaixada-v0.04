@@ -6,7 +6,6 @@ import Modal from '../components/Modal'
 import { Plus, Pencil, Phone, Mail, Globe, Info } from 'lucide-react'
 
 const CATEGORY_ICONS = { telefone: Phone, email: Mail, site: Globe }
-const CATEGORY_COLORS = { telefone: 'badge-green', email: 'badge-blue', site: 'badge-gray' }
 
 export default function EmbassyInfo() {
   const { isAdmin } = useAuth()
@@ -18,13 +17,10 @@ export default function EmbassyInfo() {
 
   const load = async () => {
     setLoading(true)
-    try {
-      const res = await api.get('/info')
-      setItems(res.data)
-    } catch (e) { toast.error('Erro') }
+    try { const res = await api.get('/info'); setItems(res.data) }
+    catch (e) { toast.error('Erro') }
     finally { setLoading(false) }
   }
-
   useEffect(() => { load() }, [])
 
   const openEdit = (item) => {
@@ -32,12 +28,7 @@ export default function EmbassyInfo() {
     setForm({ category: item.category, label: item.label, value: item.value, description: item.description || '' })
     setModalOpen(true)
   }
-
-  const openNew = () => {
-    setEditing(null)
-    setForm({ category: 'telefone', label: '', value: '', description: '' })
-    setModalOpen(true)
-  }
+  const openNew = () => { setEditing(null); setForm({ category: 'telefone', label: '', value: '', description: '' }); setModalOpen(true) }
 
   const handleSubmit = async () => {
     if (!form.label || !form.value) return toast.error('Rótulo e valor são obrigatórios')
@@ -45,18 +36,14 @@ export default function EmbassyInfo() {
       if (editing) await api.put(`/info/${editing.id}`, { ...form, active: true })
       else await api.post('/info', form)
       toast.success(editing ? 'Atualizado!' : 'Criado!')
-      setModalOpen(false)
-      load()
+      setModalOpen(false); load()
     } catch (e) { toast.error('Erro') }
   }
 
   const handleDelete = async (id) => {
     if (!confirm('Remover este item?')) return
-    try {
-      await api.delete(`/info/${id}`)
-      toast.success('Removido')
-      load()
-    } catch (e) { toast.error('Erro') }
+    try { await api.delete(`/info/${id}`); toast.success('Removido'); load() }
+    catch (e) { toast.error('Erro') }
   }
 
   const grouped = items.reduce((acc, item) => {
@@ -69,8 +56,8 @@ export default function EmbassyInfo() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Informações da Embaixada</h1>
-          <p className="text-gray-500 text-sm">Contatos e telefones úteis</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Informações da Embaixada</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Contatos e telefones úteis</p>
         </div>
         {isAdmin && <button onClick={openNew} className="btn-primary"><Plus size={16} /> Adicionar</button>}
       </div>
@@ -87,17 +74,17 @@ export default function EmbassyInfo() {
           return (
             <div key={cat} className="card">
               <div className="card-header">
-                <h2 className="font-semibold text-gray-900 flex items-center gap-2 capitalize">
-                  <Icon size={18} className="text-blue-600" /> {cat}s
+                <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 capitalize">
+                  <Icon size={18} className="text-blue-600 dark:text-blue-400" /> {cat}s
                 </h2>
               </div>
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-50 dark:divide-gray-700">
                 {catItems.map(item => (
                   <div key={item.id} className="px-6 py-4 flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-sm">{item.label}</p>
-                      <p className="text-blue-600 font-mono text-sm mt-0.5">{item.value}</p>
-                      {item.description && <p className="text-xs text-gray-400 mt-0.5">{item.description}</p>}
+                      <p className="font-medium text-sm dark:text-white">{item.label}</p>
+                      <p className="text-blue-600 dark:text-blue-400 font-mono text-sm mt-0.5">{item.value}</p>
+                      {item.description && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{item.description}</p>}
                     </div>
                     {isAdmin && (
                       <div className="flex gap-2">
@@ -124,18 +111,12 @@ export default function EmbassyInfo() {
               <option value="outro">Outro</option>
             </select>
           </div>
-          <div className="form-group">
-            <label className="label">Rótulo *</label>
-            <input className="input" placeholder="Ex: Secretaria, Emergências..." value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label className="label">Valor *</label>
-            <input className="input" placeholder="Número, email ou URL" value={form.value} onChange={e => setForm({ ...form, value: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label className="label">Descrição</label>
-            <input className="input" placeholder="Informação adicional" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-          </div>
+          <div className="form-group"><label className="label">Rótulo *</label>
+            <input className="input" placeholder="Ex: Secretaria, Emergências..." value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} /></div>
+          <div className="form-group"><label className="label">Valor *</label>
+            <input className="input" placeholder="Número, email ou URL" value={form.value} onChange={e => setForm({ ...form, value: e.target.value })} /></div>
+          <div className="form-group"><label className="label">Descrição</label>
+            <input className="input" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
         </div>
       </Modal>
     </div>

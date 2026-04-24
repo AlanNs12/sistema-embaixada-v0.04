@@ -9,6 +9,7 @@ import Vehicles from './pages/Vehicles'
 import ServiceProviders from './pages/ServiceProviders'
 import Consular from './pages/Consular'
 import Packages from './pages/Packages'
+import Visitors from './pages/Visitors'
 import Reports from './pages/Reports'
 import EmbassyInfo from './pages/EmbassyInfo'
 import AdminEmployees from './pages/admin/AdminEmployees'
@@ -31,28 +32,25 @@ function AppRoutes() {
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<Dashboard />} />
-        <Route path="funcionarios" element={<EmployeeAttendance />} />
+        <Route path="funcionarios"  element={<EmployeeAttendance />} />
         <Route path="terceirizados" element={<OutsourcedAttendance />} />
-        <Route path="veiculos" element={<Vehicles />} />
-        <Route path="prestadores" element={<ServiceProviders />} />
-        <Route path="consular" element={<Consular />} />
-        <Route path="encomendas" element={<Packages />} />
-        <Route path="relatorios" element={<Reports />} />
-        <Route path="informacoes" element={<EmbassyInfo />} />
-        <Route path="admin/funcionarios" element={<PrivateRoute adminOnly><AdminEmployees /></PrivateRoute>} />
-        <Route path="admin/usuarios" element={<PrivateRoute adminOnly><AdminUsers /></PrivateRoute>} />
-        <Route path="admin/veiculos" element={<PrivateRoute adminOnly><AdminVehicles /></PrivateRoute>} />
+        <Route path="veiculos"      element={<Vehicles />} />
+        <Route path="prestadores"   element={<ServiceProviders />} />
+        <Route path="consular"      element={<Consular />} />
+        <Route path="visitantes"    element={<Visitors />} />
+        <Route path="encomendas"    element={<Packages />} />
+        <Route path="relatorios"    element={<Reports />} />
+        <Route path="informacoes"   element={<EmbassyInfo />} />
+        <Route path="admin/funcionarios"  element={<PrivateRoute adminOnly><AdminEmployees /></PrivateRoute>} />
+        <Route path="admin/usuarios"      element={<PrivateRoute adminOnly><AdminUsers /></PrivateRoute>} />
+        <Route path="admin/veiculos"      element={<PrivateRoute adminOnly><AdminVehicles /></PrivateRoute>} />
         <Route path="admin/terceirizados" element={<PrivateRoute adminOnly><AdminOutsourced /></PrivateRoute>} />
-        <Route path="admin/auditoria" element={<PrivateRoute adminOnly><AuditLogs /></PrivateRoute>} />
+        <Route path="admin/auditoria"     element={<PrivateRoute adminOnly><AuditLogs /></PrivateRoute>} />
       </Route>
     </Routes>
   )
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
-  )
+  return <AuthProvider><AppRoutes /></AuthProvider>
 }

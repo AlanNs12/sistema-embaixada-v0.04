@@ -48,8 +48,8 @@ export default function AdminEmployees() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Funcionários da Embaixada</h1>
-          <p className="text-gray-500 text-sm">Cadastro e gestão dos funcionários</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Funcionários da Embaixada</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Cadastro e gestão dos funcionários</p>
         </div>
         <button onClick={openNew} className="btn-primary"><Plus size={16} /> Novo Funcionário</button>
       </div>
@@ -66,11 +66,11 @@ export default function AdminEmployees() {
               : filtered.length === 0 ? <tr><td colSpan={7} className="text-center py-8 text-gray-400">Nenhum funcionário encontrado</td></tr>
               : filtered.map(emp => (
                 <tr key={emp.id}>
-                  <td><p className="font-medium">{emp.name}</p></td>
-                  <td className="text-sm text-gray-600">{emp.position || '—'}</td>
-                  <td className="text-sm text-gray-600">{emp.department || '—'}</td>
-                  <td className="text-sm text-gray-500">{emp.email || '—'}</td>
-                  <td className="text-sm font-mono">{emp.phone || '—'}</td>
+                  <td><p className="font-medium dark:text-white">{emp.name}</p></td>
+                  <td className="text-sm text-gray-600 dark:text-gray-300">{emp.position || '—'}</td>
+                  <td className="text-sm text-gray-600 dark:text-gray-300">{emp.department || '—'}</td>
+                  <td className="text-sm text-gray-500 dark:text-gray-400">{emp.email || '—'}</td>
+                  <td className="text-sm font-mono dark:text-gray-300">{emp.phone || '—'}</td>
                   <td>{emp.active ? <span className="badge-green">Ativo</span> : <span className="badge-red">Inativo</span>}</td>
                   <td>
                     <button onClick={() => openEdit(emp)} className="btn-secondary btn-sm"><Pencil size={13} /> Editar</button>
