@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Usa VITE_API_URL do .env.local — fallback para localhost em dev
 const BASE_URL = import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? 'http://localhost:3001/api' : '/api')
+  (import.meta.env.DEV ? 'http://129.148.50.240:3001/api' : '/api')
 
 const api = axios.create({ baseURL: BASE_URL })
 
