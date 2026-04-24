@@ -7,12 +7,12 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://129.148.50.240:3001',
+        target: `http://${process.env.IP}:3001`,
         changeOrigin: true,
         secure: false,
       },
       '/uploads': {
-        target: 'http://129.148.50.240:3001',
+        target: `http://${process.env.IP}:3001`,
         changeOrigin: true,
         secure: false,
       },

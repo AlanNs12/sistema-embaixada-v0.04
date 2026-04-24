@@ -31,4 +31,4 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () =>
-  console.log(`🚀 Embassy API [${process.env.NODE_ENV}] → http://129.148.50.240:${PORT}`));
+  console.log(`🚀 Embassy API [${process.env.NODE_ENV}] → http://${process.env.IP}:${PORT}`));
