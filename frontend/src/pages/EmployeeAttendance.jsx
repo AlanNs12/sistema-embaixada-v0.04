@@ -4,7 +4,8 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
 import Modal from '../components/Modal'
-import { MessageSquare } from 'lucide-react'
+import DetailModal from '../components/DetailModal'
+import { MessageSquare, Eye } from 'lucide-react'
 
 const TODAY = () => format(new Date(), 'yyyy-MM-dd')
 
@@ -73,6 +74,7 @@ export default function EmployeeAttendance() {
   const [search, setSearch] = useState('')
   const [notesModal, setNotesModal] = useState(null)
   const [notesText, setNotesText] = useState('')
+  const [detail, setDetail] = useState(null)
   const isToday = date === TODAY()
 
   const load = async () => {
@@ -134,7 +136,7 @@ export default function EmployeeAttendance() {
             <tr>
               <th>Funcionário</th>
               {TIME_FIELDS.map(f => <th key={f.key}>{f.label}</th>)}
-              <th>Obs.</th><th>Status</th>
+              <th>Obs.</th><th>Status</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -175,6 +177,8 @@ export default function EmployeeAttendance() {
           </tbody>
         </table>
       </div>
+
+      <DetailModal open={!!detail} onClose={() => setDetail(null)} type="employee_attendance" record={detail} />
 
       <Modal open={!!notesModal} onClose={() => setNotesModal(null)}
         title={`Observação — ${notesModal?.employee_name}`}

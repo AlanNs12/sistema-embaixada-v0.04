@@ -1,50 +1,63 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
-import { Camera, Loader } from 'lucide-react'
+import { Camera, Loader, X } from 'lucide-react'
 
 /**
- * DocImage — carrega imagem do banco pelo entityType + entityId
+ * DocImage — exibe botão "Ver doc." que abre a imagem do banco
  * Props:
- *   entityType: 'provider' | 'provider_visit' | 'consular' | 'visitor'
- *   entityId: number
- *   imageId: number (opcional, se já tiver o ID direto)
- *   className: string
+ *   entityType : 'provider' | 'provider_visit' | 'consular' | 'visitor'
+ *   entityId   : número do registro
+ *   imageId    : ID direto na tabela document_images (opcional, preferido)
  */
-export default function DocImage({ entityType, entityId, imageId, className = 'h-10 w-10 rounded-lg object-cover' }) {
-  const [src, setSrc] = useState(null)
+export default function DocImage({ entityType, entityId, imageId }) {
+  const [src, setSrc]       = useState(null)
   const [loading, setLoading] = useState(true)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]     = useState(false)
 
   useEffect(() => {
     if (!entityId && !imageId) { setLoading(false); return }
-    const url = imageId ? `/images/id/${imageId}` : `/images/${entityType}/${entityId}`
-    api.get(imageId ? `/images/id/${imageId}` : `/images/${entityType}/${entityId}`, { responseType: imageId ? 'blob' : 'json' })
-      .then(res => {
-        if (imageId) {
-          // binary response
-          setSrc(URL.createObjectURL(res.data))
-        } else {
-          setSrc(res.data.src)
-        }
-      })
-      .catch(() => {})
+
+    // Sempre usa JSON — evita o problema do blob/ObjectURL
+    const endpoint = imageId
+      ? `/images/id/${imageId}`
+      : `/images/${entityType}/${entityId}`
+
+    api.get(endpoint)           // responseType padrão = json
+      .then(res => setSrc(res.data?.src || null))
+      .catch(() => setSrc(null))
       .finally(() => setLoading(false))
   }, [entityType, entityId, imageId])
 
   if (loading) return <Loader size={14} className="animate-spin text-gray-400" />
-  if (!src) return <span className="text-gray-300 dark:text-gray-600 text-xs flex items-center gap-1"><Camera size={12} />—</span>
+
+  if (!src) return (
+    <span className="text-gray-300 dark:text-gray-600 text-xs flex items-center gap-1">
+      <Camera size={12} />—
+    </span>
+  )
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="text-blue-500 hover:text-blue-700 text-xs flex items-center gap-1">
+      <button
+        onClick={() => setOpen(true)}
+        className="text-blue-500 hover:text-blue-700 dark:text-blue-400 text-xs flex items-center gap-1"
+      >
         <Camera size={12} /> Ver doc.
       </button>
+
       {open && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
-          <div className="relative max-w-lg w-full">
+        <div
+          className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div className="relative max-w-lg w-full" onClick={e => e.stopPropagation()}>
             <img src={src} alt="Documento" className="w-full rounded-xl shadow-2xl" />
-            <button onClick={() => setOpen(false)}
-              className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg">✕</button>
+            <button
+              onClick={() => setOpen(false)}
+              className="absolute -top-3 -right-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-full w-9 h-9 flex items-center justify-center shadow-lg hover:bg-gray-100"
+            >
+              <X size={16} />
+            </button>
           </div>
         </div>
       )}

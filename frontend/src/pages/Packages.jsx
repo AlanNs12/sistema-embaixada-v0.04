@@ -3,7 +3,8 @@ import api from '../api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import Modal from '../components/Modal'
-import { Plus, CheckCircle, Package, Pencil } from 'lucide-react'
+import DetailModal from '../components/DetailModal'
+import { Plus, CheckCircle, Package, Pencil, Eye } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Packages() {
@@ -15,6 +16,7 @@ export default function Packages() {
   const [modalOpen, setModalOpen] = useState(false)
   const [deliverModal, setDeliverModal] = useState(null)
   const [editModal, setEditModal] = useState(null)
+  const [detail, setDetail] = useState(null)
   const [form, setForm] = useState({ delivery_company:'', tracking_code:'', recipient_employee_id:'', recipient_name:'', notes:'' })
   const [deliverForm, setDeliverForm] = useState({ delivered_to_id:'', delivered_to_name:'' })
   const [editForm, setEditForm] = useState({ delivery_company:'', tracking_code:'', recipient_name:'', recipient_employee_id:'', notes:'' })
@@ -101,7 +103,7 @@ export default function Packages() {
       <div className="table-container">
         <table className="table">
           <thead>
-            <tr><th>Destinatário</th><th>Empresa</th><th>Rastreio</th><th>Recebido em</th><th>Entregue a</th><th>Status</th>{canEdit && <th>Ações</th>}</tr>
+            <tr><th>Destinatário</th><th>Empresa</th><th>Rastreio</th><th>Recebido em</th><th>Entregue a</th><th>Status</th>{canEdit && <th>Ações</th>}<th></th></tr>
           </thead>
           <tbody>
             {loading
@@ -139,6 +141,8 @@ export default function Packages() {
           </tbody>
         </table>
       </div>
+
+      <DetailModal open={!!detail} onClose={() => setDetail(null)} type="package" record={detail} />
 
       {/* New package modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Registrar Encomenda Recebida"

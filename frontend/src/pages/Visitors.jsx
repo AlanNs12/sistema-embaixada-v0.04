@@ -3,8 +3,8 @@ import api from '../api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import Modal from '../components/Modal'
-import DocImage from '../components/DocImage'
-import { Plus, LogOut, UserCheck } from 'lucide-react'
+import DetailModal from '../components/DetailModal'
+import { Plus, LogOut, UserCheck, Eye } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Visitors() {
@@ -14,6 +14,7 @@ export default function Visitors() {
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [detail, setDetail] = useState(null)
   const [form, setForm] = useState({ visitor_name: '', document_number: '', reason: '', employee_id: '', notes: '' })
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
@@ -21,16 +22,11 @@ export default function Visitors() {
   const load = async () => {
     setLoading(true)
     try {
-      const [visRes, empRes] = await Promise.all([
-        api.get(`/visitors?date=${date}`),
-        api.get('/employees'),
-      ])
-      setData(visRes.data)
-      setEmployees(empRes.data)
+      const [visRes, empRes] = await Promise.all([api.get(`/visitors?date=${date}`), api.get('/employees')])
+      setData(visRes.data); setEmployees(empRes.data)
     } catch (e) { toast.error('Erro ao carregar') }
     finally { setLoading(false) }
   }
-
   useEffect(() => { load() }, [date])
 
   const handleSubmit = async () => {
@@ -43,17 +39,13 @@ export default function Visitors() {
       toast.success('Entrada registrada!')
       setModalOpen(false)
       setForm({ visitor_name: '', document_number: '', reason: '', employee_id: '', notes: '' })
-      setPhoto(null); setPhotoPreview(null)
-      load()
+      setPhoto(null); setPhotoPreview(null); load()
     } catch (e) { toast.error(e.response?.data?.error || 'Erro') }
   }
 
   const handleExit = async (id) => {
-    try {
-      await api.put(`/visitors/${id}`, {})
-      toast.success('Saída registrada!')
-      load()
-    } catch (e) { toast.error('Erro') }
+    try { await api.put(`/visitors/${id}`, {}); toast.success('Saída registrada!'); load() }
+    catch (e) { toast.error('Erro') }
   }
 
   return (
@@ -65,11 +57,7 @@ export default function Visitors() {
         </div>
         <div className="flex gap-3">
           <input type="date" className="input w-auto" value={date} onChange={e => setDate(e.target.value)} />
-          {canEdit && (
-            <button onClick={() => setModalOpen(true)} className="btn-primary">
-              <Plus size={16} /> Registrar Entrada
-            </button>
-          )}
+          {canEdit && <button onClick={() => setModalOpen(true)} className="btn-primary"><Plus size={16} /> Registrar Entrada</button>}
         </div>
       </div>
 
@@ -99,7 +87,7 @@ export default function Visitors() {
       <div className="table-container">
         <table className="table">
           <thead>
-            <tr><th>Visitante</th><th>Doc.</th><th>Motivo</th><th>Funcionário</th><th>Entrada</th><th>Saída</th><th>Foto</th><th>Status</th></tr>
+            <tr><th>Visitante</th><th>Documento</th><th>Motivo</th><th>Funcionário</th><th>Entrada</th><th>Saída</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {loading
@@ -110,24 +98,24 @@ export default function Visitors() {
                 <tr key={v.id}>
                   <td>
                     <p className="font-medium dark:text-white">{v.visitor_name}</p>
-                    {v.notes && <p className="text-xs text-gray-400 truncate max-w-[140px]">{v.notes}</p>}
+                    {v.notes && <p className="text-xs text-gray-400 truncate max-w-[120px]">{v.notes}</p>}
                   </td>
                   <td className="font-mono text-xs text-gray-500 dark:text-gray-400">{v.document_number || '—'}</td>
-                  <td className="text-sm max-w-[140px] truncate">{v.reason || '—'}</td>
-                  <td className="text-sm">{v.employee_name || '—'}</td>
-                  <td className="font-mono text-xs">{v.entry_time ? format(new Date(v.entry_time), 'HH:mm') : '—'}</td>
-                  <td className="font-mono text-xs">{v.exit_time ? format(new Date(v.exit_time), 'HH:mm') : '—'}</td>
-                  <td>
-                    {v.document_photo
-                      ? <a href={v.document_photo} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-xs flex items-center gap-1"><Camera size={12} />Ver</a>
-                      : <span className="text-gray-300 text-xs">—</span>}
-                  </td>
+                  <td className="text-sm dark:text-gray-300 max-w-[140px] truncate">{v.reason || '—'}</td>
+                  <td className="text-sm dark:text-gray-300">{v.employee_name || '—'}</td>
+                  <td className="font-mono text-xs dark:text-gray-300">{v.entry_time ? format(new Date(v.entry_time), 'HH:mm') : '—'}</td>
+                  <td className="font-mono text-xs dark:text-gray-300">{v.exit_time ? format(new Date(v.exit_time), 'HH:mm') : '—'}</td>
                   <td>
                     {v.exit_time
                       ? <span className="badge-gray">Saiu</span>
                       : canEdit
                       ? <button onClick={() => handleExit(v.id)} className="badge-red cursor-pointer hover:bg-red-200 text-xs">Reg. saída</button>
-                      : <span className="badge-blue">Dentro</span>}
+                      : <span className="badge-green">Dentro</span>}
+                  </td>
+                  <td>
+                    <button onClick={() => setDetail(v)} className="btn-secondary btn-sm" title="Ver detalhes">
+                      <Eye size={13} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -139,41 +127,32 @@ export default function Visitors() {
         footer={<><button onClick={() => setModalOpen(false)} className="btn-secondary">Cancelar</button><button onClick={handleSubmit} className="btn-primary">Registrar</button></>}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="form-group">
-              <label className="label">Nome Completo *</label>
-              <input className="input" value={form.visitor_name} onChange={e => setForm({ ...form, visitor_name: e.target.value })} />
-            </div>
-            <div className="form-group">
-              <label className="label">Nº Documento</label>
-              <input className="input" placeholder="RG, CPF, Passaporte..." value={form.document_number} onChange={e => setForm({ ...form, document_number: e.target.value })} />
-            </div>
+            <div className="form-group"><label className="label">Nome Completo *</label>
+              <input className="input" value={form.visitor_name} onChange={e => setForm({ ...form, visitor_name: e.target.value })} /></div>
+            <div className="form-group"><label className="label">Nº Documento</label>
+              <input className="input" placeholder="RG, CPF, Passaporte..." value={form.document_number} onChange={e => setForm({ ...form, document_number: e.target.value })} /></div>
           </div>
-          <div className="form-group">
-            <label className="label">Motivo da Visita</label>
-            <textarea className="input" rows={2} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label className="label">Funcionário a Visitar</label>
+          <div className="form-group"><label className="label">Motivo da Visita</label>
+            <textarea className="input" rows={2} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} /></div>
+          <div className="form-group"><label className="label">Funcionário a Visitar</label>
             <select className="input" value={form.employee_id} onChange={e => setForm({ ...form, employee_id: e.target.value })}>
               <option value="">Selecione...</option>
               {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
-          </div>
+            </select></div>
           <div className="form-group">
             <label className="label">Foto do Documento</label>
-            {/* capture="environment" abre câmera diretamente no celular */}
             <input type="file" accept="image/*" capture="environment"
               onChange={e => { const f = e.target.files[0]; setPhoto(f); setPhotoPreview(f ? URL.createObjectURL(f) : null) }}
-              className="input text-sm" />
+              className="input text-sm dark:text-gray-300" />
             {photoPreview && <img src={photoPreview} alt="doc" className="mt-2 h-24 rounded-lg object-cover border" />}
             <p className="text-xs text-gray-400 mt-1">No celular abre a câmera automaticamente</p>
           </div>
-          <div className="form-group">
-            <label className="label">Observações</label>
-            <input className="input" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
-          </div>
+          <div className="form-group"><label className="label">Observações</label>
+            <input className="input" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
         </div>
       </Modal>
+
+      <DetailModal open={!!detail} onClose={() => setDetail(null)} type="visitor" record={detail} />
     </div>
   )
 }

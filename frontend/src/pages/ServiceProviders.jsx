@@ -3,8 +3,9 @@ import api from '../api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import Modal from '../components/Modal'
+import DetailModal from '../components/DetailModal'
 import DocImage from '../components/DocImage'
-import { Plus, LogOut } from 'lucide-react'
+import { Plus, LogOut, Eye } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function ServiceProviders() {
@@ -16,6 +17,7 @@ export default function ServiceProviders() {
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [detail, setDetail] = useState(null)
   const [form, setForm] = useState({ provider_id: '', visitor_name: '', company: '', reason: '', employee_id: '', notes: '' })
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
@@ -96,7 +98,7 @@ export default function ServiceProviders() {
       <div className="table-container">
         <table className="table">
           <thead>
-            <tr><th>Nome</th><th>Empresa</th><th>Motivo</th><th>Funcionário</th><th>Entrada</th><th>Saída</th><th>Doc.</th><th>Status</th></tr>
+            <tr><th>Nome</th><th>Empresa</th><th>Motivo</th><th>Funcionário</th><th>Entrada</th><th>Saída</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {loading
@@ -111,13 +113,17 @@ export default function ServiceProviders() {
                   <td className="text-sm dark:text-gray-300">{v.employee_name || '—'}</td>
                   <td className="font-mono text-xs dark:text-gray-300">{v.entry_time ? format(new Date(v.entry_time), 'HH:mm') : '—'}</td>
                   <td className="font-mono text-xs dark:text-gray-300">{v.exit_time ? format(new Date(v.exit_time), 'HH:mm') : '—'}</td>
-                  <td><DocImage entityType="provider_visit" entityId={v.id} imageId={v.image_id} /></td>
                   <td>
                     {v.exit_time
                       ? <span className="badge-gray">Saiu</span>
                       : canEdit
                       ? <button onClick={() => handleExit(v.id)} className="badge-red cursor-pointer hover:bg-red-200 text-xs">Reg. saída</button>
                       : <span className="badge-purple">Dentro</span>}
+                  </td>
+                  <td>
+                    <button onClick={() => setDetail(v)} className="btn-secondary btn-sm" title="Ver detalhes">
+                      <Eye size={13} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -157,6 +163,8 @@ export default function ServiceProviders() {
           </div>
         </div>
       </Modal>
+
+      <DetailModal open={!!detail} onClose={() => setDetail(null)} type="provider_visit" record={detail} />
     </div>
   )
 }

@@ -3,8 +3,9 @@ import api from '../api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import Modal from '../components/Modal'
+import DetailModal from '../components/DetailModal'
 import DocImage from '../components/DocImage'
-import { Plus, LogOut } from 'lucide-react'
+import { Plus, LogOut, Eye } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Consular() {
@@ -14,6 +15,7 @@ export default function Consular() {
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [detail, setDetail] = useState(null)
   const [form, setForm] = useState({ visitor_name: '', visit_reason: '', employee_id: '', scheduled_time: '', notes: '' })
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
@@ -84,7 +86,7 @@ export default function Consular() {
       <div className="table-container">
         <table className="table">
           <thead>
-            <tr><th>Visitante</th><th>Motivo</th><th>Funcionário</th><th>Agendado</th><th>Entrada</th><th>Saída</th><th>Doc.</th><th>Status</th></tr>
+            <tr><th>Visitante</th><th>Motivo</th><th>Funcionário</th><th>Agendado</th><th>Entrada</th><th>Saída</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {loading
@@ -99,12 +101,16 @@ export default function Consular() {
                   <td className="font-mono text-xs dark:text-gray-300">{a.scheduled_time || '—'}</td>
                   <td className="font-mono text-xs dark:text-gray-300">{a.entry_time ? format(new Date(a.entry_time), 'HH:mm') : '—'}</td>
                   <td className="font-mono text-xs dark:text-gray-300">{a.exit_time ? format(new Date(a.exit_time), 'HH:mm') : '—'}</td>
-                  <td><DocImage entityType="consular" entityId={a.id} imageId={a.image_id} /></td>
                   <td>
                     {a.exit_time ? <span className="badge-gray">Saiu</span>
                       : a.entry_time && canEdit
                       ? <button onClick={() => handleExit(a.id)} className="badge-blue cursor-pointer hover:bg-blue-200 text-xs">Reg. saída</button>
                       : <span className="badge-yellow">Aguardando</span>}
+                  </td>
+                  <td>
+                    <button onClick={() => setDetail(a)} className="btn-secondary btn-sm" title="Ver detalhes">
+                      <Eye size={13} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -112,6 +118,7 @@ export default function Consular() {
         </table>
       </div>
 
+      {/* Novo atendimento */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Novo Atendimento Consular"
         footer={<><button onClick={() => setModalOpen(false)} className="btn-secondary">Cancelar</button><button onClick={handleSubmit} className="btn-primary">Registrar</button></>}>
         <div className="space-y-4">
@@ -139,6 +146,9 @@ export default function Consular() {
             <textarea className="input" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
         </div>
       </Modal>
+
+      {/* Modal de detalhes */}
+      <DetailModal open={!!detail} onClose={() => setDetail(null)} type="consular" record={detail} />
     </div>
   )
 }

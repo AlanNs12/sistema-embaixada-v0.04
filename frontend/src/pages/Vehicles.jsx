@@ -3,8 +3,9 @@ import api from '../api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import Modal from '../components/Modal'
+import DetailModal from '../components/DetailModal'
 import { useAuth } from '../contexts/AuthContext'
-import { Car, Plus, CheckCircle, Pencil } from 'lucide-react'
+import { Car, Plus, CheckCircle, Pencil, Eye } from 'lucide-react'
 
 export default function Vehicles() {
   const { canEdit } = useAuth()
@@ -14,7 +15,8 @@ export default function Vehicles() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [returnModal, setReturnModal] = useState(null)
-  const [obsModal, setObsModal] = useState(null)  // editar observações
+  const [obsModal, setObsModal] = useState(null)
+  const [detail, setDetail] = useState(null)  // editar observações
   const [obsText, setObsText] = useState('')
   const [form, setForm] = useState({ vehicle_id: '', departure_time: format(new Date(), 'HH:mm'), driver: '', passengers: '', reason: '', observations: '' })
   const [returnTime, setReturnTime] = useState(format(new Date(), 'HH:mm'))
@@ -94,7 +96,7 @@ export default function Vehicles() {
       <div className="table-container">
         <table className="table">
           <thead>
-            <tr><th>Veículo</th><th>Saída</th><th>Retorno</th><th>Condutor</th><th>Motivo</th><th>Passageiros/Obs.</th><th>Ações</th><th>Status</th></tr>
+            <tr><th>Veículo</th><th>Saída</th><th>Retorno</th><th>Condutor</th><th>Motivo</th><th>Passageiros/Obs.</th><th>Ações</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {loading
@@ -116,7 +118,9 @@ export default function Vehicles() {
                     )}
                   </td>
                   <td>
-                    {log.return_time ? <span className="badge-green">Retornou</span> : <span className="badge-yellow">Fora</span>}
+                    </td>
+                  <td>
+                    <button onClick={() => setDetail(log)} className="btn-secondary btn-sm" title="Ver detalhes"><Eye size={13} /></button>
                   </td>
                 </tr>
               ))}
@@ -171,6 +175,8 @@ export default function Vehicles() {
           </div>
         )}
       </Modal>
+
+      <DetailModal open={!!detail} onClose={() => setDetail(null)} type="vehicle_log" record={detail} />
 
       {/* Edit observations modal (porteiro pode editar) */}
       <Modal open={!!obsModal} onClose={() => setObsModal(null)} title="Editar Observações"

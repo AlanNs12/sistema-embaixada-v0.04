@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
 import toast from 'react-hot-toast'
+import DetailModal from '../components/DetailModal'
 import { format } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
+import { Eye } from 'lucide-react'
 
 const TODAY = () => format(new Date(), 'yyyy-MM-dd')
 
@@ -11,6 +13,7 @@ function TimeBtn({ value, fieldKey, workerId, attendanceId, date, onUpdate, disa
   const [time, setTime] = useState(value || '')
   const [loading, setLoading] = useState(false)
   const isToday = date === TODAY()
+  const [detail, setDetail] = useState(null)
   const isDisabled = disabled || !isToday
 
   const save = async () => {
@@ -64,6 +67,7 @@ export default function OutsourcedAttendance() {
   const [data, setData] = useState({ present: [], absent: [] })
   const [loading, setLoading] = useState(true)
   const isToday = date === TODAY()
+  const [detail, setDetail] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -104,7 +108,7 @@ export default function OutsourcedAttendance() {
       <div className="table-container">
         <table className="table">
           <thead>
-            <tr><th>Nome</th><th>Função</th><th>Empresa</th><th>Entrada</th><th>Saída</th><th>Status</th></tr>
+            <tr><th>Nome</th><th>Função</th><th>Empresa</th><th>Entrada</th><th>Saída</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {loading
@@ -131,11 +135,18 @@ export default function OutsourcedAttendance() {
                       : row.entry_time ? <span className="badge-green">Presente</span>
                       : <span className="badge-red">Ausente</span>}
                   </td>
+                  <td>
+                    <button onClick={() => setDetail(row)} className="btn-secondary btn-sm" title="Ver detalhes">
+                      <Eye size={13} />
+                    </button>
+                  </td>
                 </tr>
               ))}
           </tbody>
         </table>
       </div>
+
+      <DetailModal open={!!detail} onClose={() => setDetail(null)} type="outsourced_attendance" record={detail} />
     </div>
   )
 }
