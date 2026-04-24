@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       allowedHosts: [
         '177.153.60.36',
+        '177.153.60.36:5173',
         'embassyphilippines.duckdns.org',
         'embassyphilippines.duckdns.org:5173',
         'localhost:5173',
