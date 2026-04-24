@@ -1,25 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-<<<<<<< Updated upstream
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-    allowedHosts: [
-      'embassyphilippines.duckdns.org'
-    ],
-    proxy: {
-      '/api': {
-        target: `http://${process.env.IP}:3001`,
-        changeOrigin: true,
-        secure: false,
-      },
-      '/uploads': {
-        target: `http://${process.env.IP}:3001`,
-        changeOrigin: true,
-        secure: false,
-=======
 export default defineConfig(({ mode }) => {
   // Carrega variáveis do .env.local / .env
   const env = loadEnv(mode, process.cwd(), '')
@@ -33,6 +14,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       port: 5173,
+      allowedHosts: [
+      'embassyphilippines.duckdns.org'
+    ],
       proxy: {
         // Todas as chamadas /api são redirecionadas para o backend
         '/api': {
@@ -46,7 +30,6 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
->>>>>>> Stashed changes
       },
     },
   }
