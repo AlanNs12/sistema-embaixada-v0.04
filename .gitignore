@@ -22,3 +22,4 @@ scripts/backups/*.sql.gz
 # ── Sistema ───────────────────────────────────────────────────
 .DS_Store
 *.zip
+.claude/worktrees/pensive-kare-98223d/
