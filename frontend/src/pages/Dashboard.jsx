@@ -13,10 +13,10 @@ const emptyData = {
 
 // Altura aproximada de cada item da lista (px) — usada para calcular o maxHeight do preview
 const ITEM_HEIGHT = 64
-const PREVIEW_COUNT = 2
+const PREVIEW_COUNT = 1
 
 function CollapsibleCard({ title, icon: Icon, iconColor, badge, badgeClass = 'badge-blue', children }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const [expanded, setExpanded] = useState(false)
 
   const count = typeof badge === 'number' ? badge : 0

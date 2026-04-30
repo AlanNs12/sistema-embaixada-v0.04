@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes scan {
+  0%   { transform: translateY(-16px); opacity: 0.6; }
+  50%  { opacity: 1; }
+  100% { transform: translateY(16px);  opacity: 0.6; }
+}
+.animate-scan { animation: scan 1.4s ease-in-out infinite alternate; }
+
 @layer base {
   body { @apply text-gray-800 dark:text-gray-100 antialiased; }
   * { @apply transition-colors duration-150; }
