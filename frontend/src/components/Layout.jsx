@@ -32,7 +32,7 @@ const adminItems = [
 
 const ROLE_LABEL = { super_admin: 'Super Admin', admin: 'Admin', porteiro: 'Porteiro', viewer: 'Visualizador' }
 
-function SidebarContent({ onClose }) {
+function SidebarContent({ onClose, isMobile }) {
   const { user, logout, isAdmin } = useAuth()
   const { dark, toggle } = useTheme()
   const navigate = useNavigate()
@@ -43,7 +43,7 @@ function SidebarContent({ onClose }) {
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div className={`px-4 py-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between${isMobile ? ' pr-12' : ''}`}>
         <div className="flex items-center gap-3">
           <img src={logo} alt="Logo" className="w-15 h-20 object-cover" />
           <div>
@@ -110,14 +110,14 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
       <aside className="hidden lg:flex w-60 flex-col">
-        <SidebarContent onClose={() => {}} />
+        <SidebarContent onClose={() => {}} isMobile={false} />
       </aside>
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-40 flex">
           <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
           <aside className="relative w-64 h-full z-50 flex flex-col">
             <button className="absolute top-4 right-4 z-10 text-gray-500" onClick={() => setSidebarOpen(false)}><X size={20} /></button>
-            <SidebarContent onClose={() => setSidebarOpen(false)} />
+            <SidebarContent onClose={() => setSidebarOpen(false)} isMobile={true} />
           </aside>
         </div>
       )}

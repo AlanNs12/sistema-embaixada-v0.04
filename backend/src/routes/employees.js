@@ -7,7 +7,7 @@ const audit = require('../middleware/audit');
 router.get('/', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM employees WHERE active = true ORDER BY name'
+      'SELECT * FROM employees WHERE active = true ORDER BY sort_order ASC, name ASC'
     );
     res.json(result.rows);
   } catch (err) {
@@ -20,12 +20,31 @@ router.post('/', authenticate, authorize('super_admin', 'admin'), audit('CREATE'
   const { name, position, department, email, phone } = req.body;
   if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
   try {
+    // Coloca o novo funcionário no final da ordem
+    const maxOrder = await pool.query('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM employees');
+    const next = maxOrder.rows[0].next;
     const result = await pool.query(
-      `INSERT INTO employees (name, position, department, email, phone)
-       VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [name, position, department, email, phone]
+      `INSERT INTO employees (name, position, department, email, phone, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [name, position, department, email, phone, next]
     );
     res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/employees/reorder  (deve vir ANTES de /:id)
+router.put('/reorder', authenticate, authorize('super_admin', 'admin'), async (req, res) => {
+  const { order } = req.body; // [{ id, sort_order }, ...]
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order deve ser um array' });
+  try {
+    await Promise.all(
+      order.map(({ id, sort_order }) =>
+        pool.query('UPDATE employees SET sort_order=$1 WHERE id=$2', [sort_order, id])
+      )
+    );
+    res.json({ message: 'Ordem atualizada' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -56,11 +75,10 @@ router.get('/attendance', authenticate, async (req, res) => {
       `SELECT ea.*, e.name as employee_name, e.position, e.department
        FROM employee_attendance ea
        JOIN employees e ON ea.employee_id = e.id
-       WHERE ea.date = $1 ORDER BY e.name`,
+       WHERE ea.date = $1 ORDER BY e.sort_order ASC, e.name ASC`,
       [date]
     );
-    // Also get employees without record today
-    const allEmps = await pool.query('SELECT * FROM employees WHERE active=true ORDER BY name');
+    const allEmps = await pool.query('SELECT * FROM employees WHERE active=true ORDER BY sort_order ASC, name ASC');
     const presentIds = new Set(result.rows.map((r) => r.employee_id));
     const absent = allEmps.rows.filter((e) => !presentIds.has(e.id)).map((e) => ({
       employee_id: e.id,
