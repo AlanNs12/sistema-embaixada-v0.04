@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
-import { Users, Car, Package, Truck, UserCog, RefreshCw, Clock, AlertCircle, ChevronDown, ChevronUp, UserCheck } from 'lucide-react'
+import { Users, Car, Package, Truck, UserCog, RefreshCw, Clock, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -11,11 +11,27 @@ const emptyData = {
   summary: { employees_in: 0, vehicles_out: 0, providers_inside: 0, pending_packages: 0 },
 }
 
-function CollapsibleCard({ title, icon: Icon, iconColor, badge, badgeClass = 'badge-blue', defaultOpen = true, children }) {
-  const [open, setOpen] = useState(defaultOpen)
+// Altura aproximada de cada item da lista (px) — usada para calcular o maxHeight do preview
+const ITEM_HEIGHT = 64
+const PREVIEW_COUNT = 2
+
+function CollapsibleCard({ title, icon: Icon, iconColor, badge, badgeClass = 'badge-blue', children }) {
+  const [open, setOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  const count = typeof badge === 'number' ? badge : 0
+  const showGlass = open && !expanded && count > PREVIEW_COUNT
+
+  const toggle = () => {
+    setOpen(prev => {
+      if (prev) setExpanded(false) // ao fechar, reseta o estado de expandido
+      return !prev
+    })
+  }
+
   return (
     <div className="card">
-      <button className="card-header w-full text-left" onClick={() => setOpen(o => !o)}>
+      <button className="card-header w-full text-left" onClick={toggle}>
         <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <Icon size={18} className={iconColor} /> {title}
         </h2>
@@ -24,7 +40,36 @@ function CollapsibleCard({ title, icon: Icon, iconColor, badge, badgeClass = 'ba
           {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
         </div>
       </button>
-      {open && <div className="divide-y divide-gray-50 dark:divide-gray-700">{children}</div>}
+
+      {open && (
+        <div className="relative">
+          {/* Conteúdo com altura limitada quando em preview */}
+          <div
+            className="divide-y divide-gray-50 dark:divide-gray-700 overflow-hidden"
+            style={showGlass ? { maxHeight: ITEM_HEIGHT * PREVIEW_COUNT + 'px' } : undefined}
+          >
+            {children}
+          </div>
+
+          {/* Efeito glass + botão "Ver todos" */}
+          {showGlass && (
+            <div className="absolute bottom-0 inset-x-0 h-20 flex items-end justify-center pb-3
+                            bg-gradient-to-t from-white dark:from-gray-800 to-transparent
+                            backdrop-blur-[2px]">
+              <button
+                onClick={e => { e.stopPropagation(); setExpanded(true) }}
+                className="text-xs font-semibold text-blue-600 dark:text-blue-400
+                           bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm
+                           border border-blue-200 dark:border-blue-700
+                           rounded-full px-4 py-1.5 shadow
+                           hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+              >
+                Ver todos ({count})
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -49,7 +94,7 @@ export default function Dashboard() {
   }
   useEffect(() => { load() }, [])
 
-  const now = format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+  const now = format(new Date(), "EEEE, dd 'De' MMMM 'De' yyyy", { locale: ptBR })
 
   return (
     <div className="space-y-6">
@@ -77,10 +122,10 @@ export default function Dashboard() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: Users,     label: 'Funcionários Presentes', count: data.summary.employees_in,    border: 'border-blue-500',   bg: 'bg-blue-50 dark:bg-blue-900/20',   ic: 'text-blue-600' },
-          { icon: Car,       label: 'Veículos na Rua',        count: data.summary.vehicles_out,    border: 'border-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20',ic: 'text-orange-500' },
-          { icon: Truck,     label: 'Prestadores Dentro',     count: data.summary.providers_inside,border: 'border-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20',ic: 'text-purple-600' },
-          { icon: Package,   label: 'Encomendas Pendentes',   count: data.summary.pending_packages,border: 'border-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20',ic: 'text-yellow-600' },
+          { icon: Users,   label: 'Funcionários Presentes', count: data.summary.employees_in,     border: 'border-blue-500',   bg: 'bg-blue-50 dark:bg-blue-900/20',    ic: 'text-blue-600' },
+          { icon: Car,     label: 'Veículos na Rua',        count: data.summary.vehicles_out,     border: 'border-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20', ic: 'text-orange-500' },
+          { icon: Truck,   label: 'Prestadores Dentro',     count: data.summary.providers_inside, border: 'border-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20', ic: 'text-purple-600' },
+          { icon: Package, label: 'Encomendas Pendentes',   count: data.summary.pending_packages, border: 'border-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20', ic: 'text-yellow-600' },
         ].map(({ icon: Icon, label, count, border, bg, ic }) => (
           <div key={label} className={`card p-5 border-l-4 ${border}`}>
             <div className="flex items-center justify-between mb-1">
@@ -138,8 +183,8 @@ export default function Dashboard() {
             badge={(data.providers_inside.length || 0) + (data.consular_inside.length || 0)} badgeClass="badge-purple">
             {!data.providers_inside.length && !data.consular_inside.length
               ? <EmptyRow msg="Ninguém no momento" />
-              : [...(data.providers_inside||[]).map(p => ({ ...p, tipo: 'Prestador' })),
-                 ...(data.consular_inside||[]).map(c => ({ ...c, name: c.visitor_name, tipo: 'Consular' }))
+              : [...(data.providers_inside || []).map(p => ({ ...p, tipo: 'Prestador' })),
+                 ...(data.consular_inside || []).map(c => ({ ...c, name: c.visitor_name, tipo: 'Consular' }))
                 ].map(p => (
                 <div key={`${p.tipo}-${p.id}`} className="px-6 py-3 flex items-center justify-between">
                   <div>
@@ -169,7 +214,7 @@ export default function Dashboard() {
 
       {!!data.outsourced_inside?.length && (
         <CollapsibleCard title="Terceirizados Presentes" icon={UserCog} iconColor="text-green-600"
-          badge={data.outsourced_inside.length} badgeClass="badge-green" defaultOpen={false}>
+          badge={data.outsourced_inside.length} badgeClass="badge-green">
           <div className="flex flex-wrap gap-3 p-6">
             {data.outsourced_inside.map(w => (
               <div key={w.id} className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2">
