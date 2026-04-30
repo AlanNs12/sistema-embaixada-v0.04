@@ -53,7 +53,8 @@ router.get('/dashboard', authenticate, async (req, res) => {
       pool.query(
         `SELECT ea.*, e.name, e.position FROM employee_attendance ea
          JOIN employees e ON ea.employee_id=e.id
-         WHERE ea.date=$1 AND ea.entry_time IS NOT NULL AND ea.exit_time IS NULL`, [today]),
+         WHERE ea.date=$1 AND ea.entry_time IS NOT NULL AND ea.exit_time IS NULL
+         ORDER BY e.sort_order ASC, e.name ASC`, [today]),
       pool.query(
         `SELECT ea.*, e.name FROM employee_attendance ea
          JOIN employees e ON ea.employee_id=e.id
