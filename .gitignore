@@ -1,6 +1,7 @@
 # ── Dependências ──────────────────────────────────────────────
 node_modules/
 */node_modules/
+frontend/node_modules/
 
 # ── ARQUIVOS DE AMBIENTE — NUNCA commitar ─────────────────────
 # Contêm senhas, IPs, chaves JWT — manter fora do git
