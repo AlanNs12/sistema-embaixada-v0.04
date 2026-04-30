@@ -1,213 +1,286 @@
-# 🏛️ Sistema de Controle — Portaria da Embaixada
+# Sistema de Gestão — Portaria da Embaixada
 
-Sistema completo para digitalização dos controles e registros da portaria.
+Sistema web completo para digitalização dos controles diários da portaria: ponto de funcionários, frota de veículos, prestadores, visitantes, encomendas e atendimentos consulares.
 
 ---
 
-## 🗂️ Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
-embassy-system/
-├── backend/          # API Node.js + Express
-├── frontend/         # React + Vite + Tailwind
+sistema-embaixada/
+├── backend/                  # API REST — Node.js + Express + PostgreSQL
+│   └── src/
+│       ├── routes/           # Endpoints da API
+│       ├── middleware/       # Autenticação JWT e auditoria
+│       ├── config/           # Banco de dados e upload
+│       └── migrations/       # Scripts SQL incrementais
+├── frontend/                 # SPA — React + Vite + Tailwind CSS
+│   └── src/
+│       ├── pages/            # Telas do sistema
+│       ├── components/       # Componentes reutilizáveis
+│       └── contexts/         # Auth e Theme
 └── database/
-    └── schema.sql    # Schema completo do PostgreSQL
+    └── schema.sql            # Schema completo do PostgreSQL
 ```
 
 ---
 
-## 🚀 Passo a Passo para Rodar
+## Pré-requisitos
 
-### 1. Preparar o banco de dados (na sua VPS)
+| Ferramenta | Versão mínima |
+|------------|---------------|
+| Node.js    | 18+           |
+| npm        | 9+            |
+| PostgreSQL | 14+           |
 
-Conecte ao seu PostgreSQL e crie o banco:
+---
 
-```sql
-CREATE DATABASE embassy_db;
-```
+## Instalação e execução local
 
-Depois rode o schema:
+### 1. Banco de dados
+
+Crie o banco e aplique o schema:
 
 ```bash
-psql -h SEU_IP_VPS -U SEU_USUARIO -d embassy_db -f database/schema.sql
+psql -U postgres -c "CREATE DATABASE embassy_db;"
+psql -U postgres -d embassy_db -f database/schema.sql
 ```
 
----
-
-### 2. Configurar o Backend
+### 2. Backend
 
 ```bash
 cd backend
-cp .env.example .env
+cp .env.example .env   # edite com suas credenciais
+npm install
+npm run dev            # http://localhost:3001
 ```
 
-Edite o `.env` com suas credenciais reais:
+`.env` mínimo:
 
 ```env
-DB_HOST=SEU_IP_VPS
+DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=embassy_db
-DB_USER=seu_usuario
+DB_USER=postgres
 DB_PASSWORD=sua_senha
 
-JWT_SECRET=uma_chave_muito_longa_e_aleatoria_aqui_123456
+JWT_SECRET=chave_aleatoria_longa_minimo_32_caracteres
 JWT_EXPIRES_IN=8h
 
 PORT=3001
+NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 ```
 
-Instale as dependências e rode:
-
-```bash
-npm install
-npm run dev
-```
-
-O backend estará em: `http://localhost:3001`
-
----
-
-### 3. Configurar o Frontend
+### 3. Frontend
 
 ```bash
 cd frontend
+cp .env.example .env.local   # ou crie manualmente
 npm install
-npm run dev
+npm run dev                  # http://localhost:5173
 ```
 
-O frontend estará em: `http://localhost:5173`
+`.env.local`:
+
+```env
+VITE_API_URL=http://localhost:3001/api
+```
 
 ---
 
-## 🔑 Login Padrão (Super Admin)
+## Login padrão
 
-| Campo | Valor |
-|-------|-------|
+| Campo | Valor            |
+|-------|------------------|
 | Email | `admin@embaixada.gov` |
-| Senha | `Admin@123` |
+| Senha | `Admin@123`      |
 
-> ⚠️ **Troque a senha imediatamente após o primeiro acesso!**
+> **Troque a senha após o primeiro acesso.**
 
-Para gerar um novo hash de senha use:
-```js
-const bcrypt = require('bcrypt')
-bcrypt.hash('SuaNovaSenha', 10).then(console.log)
+Para gerar um novo hash:
+```bash
+node -e "require('bcrypt').hash('NovaSenha', 10).then(console.log)"
 ```
 
 ---
 
-## 👥 Perfis de Acesso
+## Perfis de acesso
 
-| Perfil | Permissões |
-|--------|-----------|
-| `porteiro` | Registra todos os controles diários |
-| `admin` | Porteiro + cadastros + relatórios |
+| Perfil        | O que pode fazer |
+|---------------|------------------|
+| `viewer`      | Somente leitura — sem alterações |
+| `porteiro`    | Registra todos os controles diários |
+| `admin`       | Porteiro + cadastros + relatórios |
 | `super_admin` | Acesso total + usuários + auditoria |
 
 ---
 
-## 📋 Módulos do Sistema
+## Módulos
 
-| Módulo | Rota | Descrição |
-|--------|------|-----------|
-| Dashboard | `/` | Visão em tempo real da embaixada |
-| Funcionários | `/funcionarios` | Ponto diário (entrada/almoço/saída) |
-| Terceirizados | `/terceirizados` | Ponto de jardineiros e limpeza |
-| Veículos | `/veiculos` | Saídas e retornos da frota |
-| Prestadores | `/prestadores` | Controle de acesso + foto do doc |
-| Atend. Consular | `/consular` | Visitantes consulares + foto do doc |
-| Encomendas | `/encomendas` | Recebimento e entrega de pacotes |
-| Relatórios | `/relatorios` | Exportação CSV por período |
-| Informações | `/informacoes` | Contatos e telefones úteis |
-| Admin | `/admin/*` | Cadastros, usuários, auditoria |
+| Módulo               | Rota                    | Descrição |
+|----------------------|-------------------------|-----------|
+| Dashboard            | `/`                     | Situação em tempo real da embaixada |
+| Funcionários         | `/funcionarios`         | Ponto diário — entrada, almoço e saída |
+| Terceirizados        | `/terceirizados`        | Ponto de jardineiros, limpeza, etc. |
+| Veículos             | `/veiculos`             | Saídas e retornos da frota com data/hora |
+| Prestadores          | `/prestadores`          | Acesso de prestadores de serviço |
+| Visitantes           | `/visitantes`           | Registro de visitantes com documento |
+| Atend. Consular      | `/consular`             | Agendamentos e atendimentos consulares |
+| Encomendas           | `/encomendas`           | Recebimento e entrega de pacotes (+ leitor de código de barras) |
+| Relatórios           | `/relatorios`           | Exportação CSV e PDF por período |
+| Informações          | `/informacoes`          | Contatos e telefones úteis da embaixada |
+| Admin — Funcionários | `/admin/funcionarios`   | Cadastro com ordenação manual (drag-and-drop) |
+| Admin — Usuários     | `/admin/usuarios`       | Gerenciamento de usuários do sistema |
+| Admin — Veículos     | `/admin/veiculos`       | Cadastro de veículos da frota |
+| Admin — Terceirizados| `/admin/terceirizados`  | Cadastro de trabalhadores terceirizados |
+| Admin — Auditoria    | `/admin/auditoria`      | Log de todas as ações no sistema |
 
 ---
 
-## 🗄️ API Endpoints
+## API — Endpoints principais
 
-### Auth
-- `POST /api/auth/login` — Login
-- `GET /api/auth/me` — Usuário logado
+### Autenticação
+```
+POST   /api/auth/login          Login (retorna JWT)
+GET    /api/auth/me             Usuário autenticado
+```
 
 ### Funcionários
-- `GET /api/employees` — Lista
-- `POST /api/employees` — Criar (admin)
-- `GET /api/employees/attendance?date=` — Ponto do dia
-- `POST /api/employees/attendance` — Registrar ponto
+```
+GET    /api/employees                    Lista (ordem sort_order)
+POST   /api/employees                    Criar (admin)
+PUT    /api/employees/reorder            Reordenar (admin) — body: { order: [{id, sort_order}] }
+PUT    /api/employees/:id                Editar (admin)
+GET    /api/employees/attendance?date=   Ponto do dia
+POST   /api/employees/attendance         Registrar/atualizar ponto
+PUT    /api/employees/attendance/:id     Atualizar campo específico
+```
 
 ### Veículos
-- `GET /api/vehicles/logs?date=` — Logs do dia + veículos fora
-- `POST /api/vehicles/logs` — Registrar saída
-- `PUT /api/vehicles/logs/:id` — Registrar retorno
+```
+GET    /api/vehicles                     Lista veículos cadastrados
+GET    /api/vehicles/logs?date=          Logs do dia + veículos fora
+POST   /api/vehicles/logs                Registrar saída
+PUT    /api/vehicles/logs/:id            Registrar retorno (aceita return_date)
+```
 
-### Dashboard
-- `GET /api/dashboard` — Situação em tempo real
+### Encomendas
+```
+GET    /api/packages?status=             Lista (pending | delivered | "")
+POST   /api/packages                     Registrar encomenda recebida
+PUT    /api/packages/:id                 Editar ou registrar entrega
+```
 
 ### Relatórios
-- `GET /api/reports/:type?start=&end=` — Tipos: employee_attendance, outsourced_attendance, vehicles, providers, consular, packages
-
----
-
-## 🛠️ Para Produção (deploy)
-
-### Backend
-```bash
-# Build
-cd backend
-NODE_ENV=production npm start
-
-# Recomendado: usar PM2
-npm install -g pm2
-pm2 start src/index.js --name embassy-api
-pm2 save
 ```
-
-### Frontend
-```bash
-cd frontend
-npm run build
-# Os arquivos ficam em dist/
-# Sirva com nginx ou copie para o servidor
+GET    /api/reports/:type?start=&end=
 ```
+Tipos disponíveis: `employee_attendance`, `outsourced_attendance`, `vehicles`, `providers`, `consular`, `packages`, `visitors`
 
-### Nginx (exemplo)
-```nginx
-server {
-    listen 80;
-    server_name seu-dominio.com;
-
-    location /api {
-        proxy_pass http://localhost:3001;
-    }
-
-    location /uploads {
-        proxy_pass http://localhost:3001;
-    }
-
-    location / {
-        root /caminho/para/frontend/dist;
-        try_files $uri /index.html;
-    }
-}
+### Dashboard
+```
+GET    /api/dashboard                    Situação atual em tempo real
 ```
 
 ---
 
-## 📦 Dependências Principais
+## Banco de dados
+
+O arquivo [database/schema.sql](database/schema.sql) contém o schema completo com todas as tabelas e índices. Execute-o uma única vez para criar a estrutura do banco.
+
+### Tabelas
+
+| Tabela                    | Descrição |
+|---------------------------|-----------|
+| `users`                   | Usuários do sistema |
+| `audit_logs`              | Registro de todas as ações |
+| `embassy_info`            | Informações e contatos da embaixada |
+| `employees`               | Funcionários (com `sort_order` para ordenação manual) |
+| `employee_attendance`     | Ponto diário dos funcionários |
+| `outsourced_workers`      | Cadastro de terceirizados |
+| `outsourced_attendance`   | Ponto diário dos terceirizados |
+| `vehicles`                | Frota de veículos |
+| `vehicle_logs`            | Registros de saída/retorno (com `return_date` para viagens multi-dia) |
+| `service_providers`       | Cadastro de prestadores de serviço |
+| `service_provider_visits` | Visitas de prestadores |
+| `consular_appointments`   | Atendimentos consulares |
+| `packages`                | Encomendas recebidas |
+| `visitor_logs`            | Registros de visitantes |
+| `document_images`         | Fotos de documentos (base64) |
+
+### Migrações incrementais
+
+Scripts para atualizar bancos já existentes:
+
+```bash
+psql -U postgres -d embassy_db -f backend/src/migrations/001_sort_order_return_date.sql
+```
+
+| Arquivo | O que faz |
+|---------|-----------|
+| `001_sort_order_return_date.sql` | Adiciona `sort_order` em `employees` e `return_date` em `vehicle_logs` |
+
+---
+
+## Stack tecnológica
 
 ### Backend
-- `express` — Servidor HTTP
-- `pg` — Cliente PostgreSQL
-- `jsonwebtoken` — Autenticação JWT
-- `bcrypt` — Hash de senhas
-- `multer` — Upload de fotos
-- `cors` — Cross-Origin
+| Pacote           | Versão   | Uso |
+|------------------|----------|-----|
+| express          | ^4.19    | Servidor HTTP |
+| pg               | ^8.11    | Cliente PostgreSQL |
+| jsonwebtoken     | ^9.0     | Autenticação JWT |
+| bcrypt           | ^5.1     | Hash de senhas |
+| multer           | ^1.4     | Upload de imagens |
+| cors             | ^2.8     | Cross-Origin |
+| dotenv           | ^16.4    | Variáveis de ambiente |
 
 ### Frontend
-- `react` + `react-router-dom` — SPA
-- `tailwindcss` — Estilização
-- `axios` — Requisições HTTP
-- `lucide-react` — Ícones
-- `date-fns` — Manipulação de datas
-- `react-hot-toast` — Notificações
+| Pacote              | Versão   | Uso |
+|---------------------|----------|-----|
+| react               | ^18.3    | UI |
+| react-router-dom    | ^6.23    | Roteamento SPA |
+| vite                | ^5.2     | Build |
+| tailwindcss         | ^3.4     | Estilização |
+| axios               | ^1.7     | Requisições HTTP |
+| date-fns            | ^3.6     | Manipulação de datas |
+| jspdf + autotable   | ^2.5     | Geração de PDFs |
+| lucide-react        | ^0.383   | Ícones |
+| react-hot-toast     | ^2.4     | Notificações |
+| @zxing/browser      | ^0.2     | Leitura de código de barras via câmera |
+
+---
+
+## Deploy em produção
+
+Consulte o [DEPLOY.md](DEPLOY.md) para o guia completo de deploy em VPS com PM2 e Nginx, incluindo scripts automáticos de setup, atualização e backup.
+
+Resumo rápido:
+
+```bash
+# No servidor — primeira vez
+git clone <repo> embassy && cd embassy
+bash scripts/setup.sh
+
+# Atualizações
+bash scripts/deploy.sh
+
+# Verificar status
+bash scripts/status.sh
+```
+
+---
+
+## Funcionalidades principais
+
+- **Dashboard em tempo real** — cards com glass effect, fechados/abertos com 1 item de preview
+- **Ponto eletrônico** — funcionários e terceirizados, bloqueio de edição em datas passadas
+- **Frota de veículos** — suporte a viagens multi-dia (saída e retorno em datas diferentes)
+- **Encomendas** — leitor de código de barras via câmera (suporta Code 128, EAN, QR Code e outros)
+- **Relatórios em PDF e CSV** — por período, com uma página por funcionário no PDF de ponto
+- **Ordenação manual** — admin arrasta para reordenar funcionários (drag-and-drop); ordem reflete em todas as telas e PDFs
+- **Fotos de documentos** — captura de documento de prestadores, visitantes e consulares
+- **Auditoria completa** — log de criação, edição e exclusão com usuário e IP
+- **Tema claro/escuro** — persistido por usuário no localStorage
+- **Responsivo** — funciona em desktop e mobile
