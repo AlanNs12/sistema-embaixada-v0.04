@@ -115,8 +115,14 @@ function getRow(type, row) {
       return [fmtDate(row.date), row.name, row.department||'—', row.entry_time||'—', row.lunch_out_time||'—', row.lunch_return_time||'—', row.exit_time||'—', row.notes||'—']
     case 'outsourced_attendance':
       return [fmtDate(row.date), row.name, row.role, row.company||'—', row.entry_time||'—', row.exit_time||'—']
-    case 'vehicles':
-      return [fmtDate(row.date), row.plate, row.model, row.departure_time||'—', row.return_time||'—', row.driver||'—', row.reason||'—', row.observations||'—']
+    case 'vehicles': {
+      const multiDay = row.return_date && row.return_date !== row.date
+      const dep = multiDay ? `${fmtDate(row.date)} ${fmtTime(row.departure_time)}` : (row.departure_time || '—')
+      const ret = row.return_time
+        ? (multiDay ? `${fmtDate(row.return_date)} ${fmtTime(row.return_time)}` : row.return_time)
+        : '—'
+      return [fmtDate(row.date), row.plate, row.model, dep, ret, row.driver||'—', row.reason||'—', row.observations||'—']
+    }
     case 'providers':
       return [row.entry_time ? `${fmtDate(row.entry_time)} ${fmtTime(row.entry_time)}` : '—', row.name, row.company||'—', row.reason||'—', row.employee_name||'—', fmtTime(row.entry_time), fmtTime(row.exit_time)]
     case 'consular':
@@ -312,7 +318,12 @@ export default function Reports() {
         ? employees.find(e => String(e.id) === filterEmployee)?.name
         : null
 
-      const names = empName ? [empName] : Object.keys(byEmployee).sort()
+      // Usa a ordem definida pelo admin (sort_order); empregados sem registro no período ficam no final
+      const orderedByApi = employees
+        .filter(e => byEmployee[e.name])
+        .map(e => e.name)
+      const remaining = Object.keys(byEmployee).filter(n => !orderedByApi.includes(n))
+      const names = empName ? [empName] : [...orderedByApi, ...remaining]
 
       names.forEach((name, idx) => {
         if (idx > 0) doc.addPage()

@@ -69,18 +69,19 @@ router.post('/logs', authenticate, authorize('super_admin','admin','porteiro'), 
 
 // PUT /api/vehicles/logs/:id — porteiro pode editar observations e registrar retorno
 router.put('/logs/:id', authenticate, authorize('super_admin','admin','porteiro'), audit('UPDATE','vehicle_log'), async (req, res) => {
-  const { return_time, driver, passengers, reason, observations } = req.body;
+  const { return_time, return_date, driver, passengers, reason, observations } = req.body;
   try {
     const result = await pool.query(
       `UPDATE vehicle_logs SET
          return_time  = COALESCE($1, return_time),
-         driver       = COALESCE($2, driver),
-         passengers   = COALESCE($3, passengers),
-         reason       = COALESCE($4, reason),
-         observations = COALESCE($5, observations),
+         return_date  = COALESCE($2, return_date),
+         driver       = COALESCE($3, driver),
+         passengers   = COALESCE($4, passengers),
+         reason       = COALESCE($5, reason),
+         observations = COALESCE($6, observations),
          updated_at   = NOW()
-       WHERE id=$6 RETURNING *`,
-      [return_time||null, driver||null, passengers||null, reason||null, observations||null, req.params.id]);
+       WHERE id=$7 RETURNING *`,
+      [return_time||null, return_date||null, driver||null, passengers||null, reason||null, observations||null, req.params.id]);
     res.json(result.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
