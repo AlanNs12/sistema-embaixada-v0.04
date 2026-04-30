@@ -1,11 +1,77 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
 import toast from 'react-hot-toast'
-import { format, subDays, parseISO } from 'date-fns'
+import { format, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { BarChart2, Download, FileText } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+
+// ================================================================
+//  ✏️  CONFIGURAÇÕES DO CABEÇALHO DO PDF
+//  Edite as linhas abaixo para personalizar os relatórios em PDF.
+//  Após editar, salve o arquivo e rode: npm run build
+// ================================================================
+
+const PDF_CONFIG = {
+  // Nome principal que aparece no topo de todos os PDFs
+  titulo: 'Gestão Portaria',
+
+  // Segunda linha do cabeçalho (nome da instituição, país, etc.)
+  subtitulo: 'Embassy of the Philippines in Brazil',
+
+  // Cor do título principal em formato RGB [R, G, B]
+  corTitulo: [30, 64, 175],
+
+  // Cor do cabeçalho das tabelas (linha de títulos das colunas)
+  corCabecalhoTabela: [30, 64, 175],
+
+  // Cor das linhas alternadas da tabela
+  // Para desativar use: [255, 255, 255]
+  corLinhaAlternada: [239, 246, 255],
+
+  // Texto do rodapé de cada página. Use null para não exibir.
+  rodape: 'Documento gerado automaticamente pelo Sistema de Acompanhamento da Portaria',
+
+  // Orientação: 'landscape' (horizontal) ou 'portrait' (vertical)
+  orientacao: 'landscape',
+
+  // Caminho da logo dentro de frontend/public/
+  // Ex: '/logo.png' ou '/images/logo-emblem.png'
+  // Use null para não exibir logo
+  logo: '/images/logo-emblem.png',
+
+  // Tamanho da logo no PDF em milímetros [largura, altura]
+  logoTamanho: [18, 18],
+}
+
+// ================================================================
+//  FIM DAS CONFIGURAÇÕES — não edite abaixo desta linha
+//  a menos que saiba o que está fazendo
+// ================================================================
+
+// Carrega e cacheia a logo uma única vez
+let _logoCache = null
+async function loadLogo() {
+  if (!PDF_CONFIG.logo) return null
+  if (_logoCache) return _logoCache
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.src = PDF_CONFIG.logo
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width  = img.width
+      canvas.height = img.height
+      canvas.getContext('2d').drawImage(img, 0, 0)
+      _logoCache = canvas.toDataURL('image/png')
+      resolve(_logoCache)
+    }
+    img.onerror = () => {
+      console.warn('[Reports] Logo não encontrada em:', PDF_CONFIG.logo)
+      resolve(null)
+    }
+  })
+}
 
 const REPORT_TYPES = [
   { value: 'employee_attendance',   label: 'Ponto de Funcionários',    hasEmployeeFilter: true },
@@ -27,11 +93,9 @@ const COLUMNS = {
   visitors:             ['Data', 'Visitante', 'Documento', 'Motivo', 'Funcionário', 'Entrada', 'Saída'],
 }
 
-// Formata data sem fuso horário
 const fmtDate = (v) => {
   if (!v) return '—'
   try {
-    // se for string tipo "2024-01-15" ou "2024-01-15T..." parse manualmente
     const s = typeof v === 'string' ? v.substring(0, 10) : format(new Date(v), 'yyyy-MM-dd')
     const [y, m, d] = s.split('-')
     return `${d}/${m}/${y}`
@@ -40,9 +104,7 @@ const fmtDate = (v) => {
 const fmtTime = (v) => {
   if (!v) return '—'
   try {
-    if (typeof v === 'string' && v.includes('T')) {
-      return v.substring(11, 16)
-    }
+    if (typeof v === 'string' && v.includes('T')) return v.substring(11, 16)
     return v.substring(0, 5)
   } catch { return v }
 }
@@ -67,14 +129,113 @@ function getRow(type, row) {
   }
 }
 
-function addPDFHeader(doc, label, start, end, count) {
-  doc.setFontSize(15); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 64, 175)
-  doc.text('Sistema de Controle — Embaixada', 14, 16)
-  doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 80, 80)
-  doc.text(`Relatório: ${label}`, 14, 23)
-  doc.text(`Período: ${fmtDate(start)} a ${fmtDate(end)}  |  Total: ${count} registros`, 14, 29)
-  doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 35)
-  doc.setDrawColor(200, 200, 200); doc.line(14, 38, doc.internal.pageSize.width - 14, 38)
+// Desenha o cabeçalho em qualquer página e retorna o Y onde a tabela começa
+function drawHeader(doc, { label, start, end, count, extraLine, logo }) {
+  const W = doc.internal.pageSize.width
+  const [logoW, logoH] = PDF_CONFIG.logoTamanho
+
+  // ── Logo (se existir) ─────────────────────────────────────
+  if (logo) {
+    doc.addImage(logo, 'PNG', 14, 4, logoW, logoH)
+  }
+
+  // Textos deslocam para a direita quando há logo
+  const xTexto = logo ? 14 + logoW + 4 : 14
+
+  // ── Título principal ──────────────────────────────────────
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...PDF_CONFIG.corTitulo)
+  doc.text(PDF_CONFIG.titulo, xTexto, 11)
+
+  // ── Subtítulo ─────────────────────────────────────────────
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(120, 120, 120)
+  doc.text(PDF_CONFIG.subtitulo, xTexto, 17)
+
+  // ── Data de geração (canto superior direito) ──────────────
+  doc.setFontSize(7.5)
+  doc.setTextColor(160, 160, 160)
+  doc.text(
+    `Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
+    W - 14, 9, { align: 'right' }
+  )
+
+  // ── Linha separadora ──────────────────────────────────────
+  const sepY = logo ? Math.max(logoH + 6, 22) : 22
+  doc.setDrawColor(220, 220, 220)
+  doc.setLineWidth(0.3)
+  doc.line(14, sepY, W - 14, sepY)
+
+  // ── Informações do relatório ──────────────────────────────
+  let infoY = sepY + 6
+  doc.setFontSize(9)
+  doc.setTextColor(60, 60, 60)
+
+  // Linha "Relatório: Ponto de Funcionários"
+  doc.setFont('helvetica', 'bold')
+  doc.text('Relatório: ', 14, infoY)
+  doc.setFont('helvetica', 'normal')
+  doc.text(label, 14 + doc.getTextWidth('Relatório: '), infoY)
+
+  // Linha "Funcionário: Nome" (só no relatório por funcionário)
+  if (extraLine) {
+    infoY += 5
+    doc.setFont('helvetica', 'bold')
+    doc.text('Funcionário: ', 14, infoY)
+    doc.setFont('helvetica', 'normal')
+    doc.text(extraLine, 14 + doc.getTextWidth('Funcionário: '), infoY)
+  }
+
+  // Linha de período + total
+  infoY += 5
+  doc.setTextColor(100, 100, 100)
+  doc.text(`Período: ${fmtDate(start)} a ${fmtDate(end)}`, 14, infoY)
+  if (count !== undefined) {
+    doc.text(`Total: ${count} registros`, W - 14, infoY, { align: 'right' })
+  }
+
+  // ── Linha divisória final ─────────────────────────────────
+  const lineY = infoY + 4
+  doc.setDrawColor(200, 200, 200)
+  doc.setLineWidth(0.5)
+  doc.line(14, lineY, W - 14, lineY)
+
+  return lineY + 3 // Y onde a tabela começa
+}
+
+// Configuração visual das tabelas
+const tableStyle = {
+  theme: 'striped',
+  headStyles: {
+    fillColor: PDF_CONFIG.corCabecalhoTabela,
+    textColor: 255,
+    fontStyle: 'bold',
+    fontSize: 8,
+  },
+  bodyStyles: {
+    fontSize: 7.5,
+    textColor: [40, 40, 40],
+  },
+  alternateRowStyles: {
+    fillColor: PDF_CONFIG.corLinhaAlternada,
+  },
+  margin: { left: 14, right: 14 },
+}
+
+// Escreve rodapé em todas as páginas
+function drawFooters(doc, totalPages) {
+  if (!PDF_CONFIG.rodape) return
+  const W = doc.internal.pageSize.width
+  const H = doc.internal.pageSize.height
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setFontSize(6.5)
+    doc.setTextColor(180, 180, 180)
+    doc.text(PDF_CONFIG.rodape, 14, H - 5)
+    doc.text(`Página ${i} de ${totalPages}`, W - 14, H - 5, { align: 'right' })
+  }
 }
 
 export default function Reports() {
@@ -101,7 +262,6 @@ export default function Reports() {
     finally { setLoading(false) }
   }
 
-  // Aplica filtro de funcionário no frontend
   const filteredData = () => {
     if (!data?.data) return []
     if (!filterEmployee || type !== 'employee_attendance') return data.data
@@ -115,94 +275,74 @@ export default function Reports() {
 
   const exportCSV = () => {
     if (!rows.length) return
-    const csv = [COLUMNS[type].join(','), ...rows.map(r => getRow(type, r).map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n')
+    const csv = [
+      COLUMNS[type].join(','),
+      ...rows.map(r => getRow(type, r).map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
-    a.download = `relatorio_${type}_${start}_${end}.csv`; a.click()
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `relatorio_${type}_${start}_${end}.csv`
+    a.click()
     URL.revokeObjectURL(a.href)
   }
 
-  const exportPDF = () => {
+  // exportPDF é async para aguardar o carregamento da logo
+  const exportPDF = async () => {
     if (!rows.length) return toast.error('Nenhum dado para exportar')
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
 
-    if (type === 'employee_attendance' && filterEmployee) {
-      // Modo: um funcionário por página
-      const emp = employees.find(e => String(e.id) === filterEmployee)
-      const empName = emp?.name || 'Funcionário'
-      const empRows = rows
+    const logo = await loadLogo()
 
-      doc.setFontSize(15); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 64, 175)
-      doc.text('Sistema de Controle — Embaixada', 14, 16)
-      doc.setFontSize(11); doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60)
-      doc.text(`Funcionário: ${empName}`, 14, 24)
-      doc.text(`Período: ${fmtDate(start)} a ${fmtDate(end)}  |  ${empRows.length} registros`, 14, 30)
-      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36)
-      doc.setDrawColor(200,200,200); doc.line(14,39,doc.internal.pageSize.width-14,39)
+    const doc = new jsPDF({
+      orientation: PDF_CONFIG.orientacao,
+      unit: 'mm',
+      format: 'a4',
+    })
 
-      autoTable(doc, {
-        startY: 43,
-        head: [COLUMNS[type]],
-        body: empRows.map(r => getRow(type, r)),
-        theme: 'striped',
-        headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', fontSize: 8 },
-        bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
-        alternateRowStyles: { fillColor: [239, 246, 255] },
-        margin: { left: 14, right: 14 },
-      })
-    } else if (type === 'employee_attendance' && !filterEmployee) {
-      // Modo: todos os funcionários, um por página
+    if (type === 'employee_attendance') {
+      // ── Uma página por funcionário ────────────────────────
       const byEmployee = {}
       rows.forEach(r => {
         const key = r.name || 'Sem nome'
         if (!byEmployee[key]) byEmployee[key] = []
         byEmployee[key].push(r)
       })
-      const empNames = Object.keys(byEmployee).sort()
 
-      empNames.forEach((empName, idx) => {
+      const empName = filterEmployee
+        ? employees.find(e => String(e.id) === filterEmployee)?.name
+        : null
+
+      const names = empName ? [empName] : Object.keys(byEmployee).sort()
+
+      names.forEach((name, idx) => {
         if (idx > 0) doc.addPage()
-        const empRows = byEmployee[empName]
-
-        doc.setFontSize(15); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 64, 175)
-        doc.text('Sistema de Controle — Embaixada', 14, 16)
-        doc.setFontSize(11); doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60)
-        doc.text(`Funcionário: ${empName}`, 14, 24)
-        doc.text(`Período: ${fmtDate(start)} a ${fmtDate(end)}  |  ${empRows.length} registros`, 14, 30)
-        doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36)
-        doc.setDrawColor(200,200,200); doc.line(14,39,doc.internal.pageSize.width-14,39)
-
+        const empRows = byEmployee[name] || rows
+        const startY = drawHeader(doc, {
+          label: typeLabel,
+          start, end,
+          count: empRows.length,
+          extraLine: name,
+          logo,
+        })
         autoTable(doc, {
-          startY: 43,
+          ...tableStyle,
+          startY,
           head: [COLUMNS[type]],
           body: empRows.map(r => getRow(type, r)),
-          theme: 'striped',
-          headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', fontSize: 8 },
-          bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
-          alternateRowStyles: { fillColor: [239, 246, 255] },
-          margin: { left: 14, right: 14 },
         })
-
-        // Rodapé com número de página
-        const pageCount = doc.internal.getNumberOfPages()
-        doc.setFontSize(7); doc.setTextColor(150,150,150)
-        doc.text(`Página ${idx+1} de ${empNames.length}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 5)
       })
     } else {
-      // Relatório padrão
-      addPDFHeader(doc, typeLabel, start, end, rows.length)
+      // ── Relatório padrão ──────────────────────────────────
+      const startY = drawHeader(doc, { label: typeLabel, start, end, count: rows.length, logo })
       autoTable(doc, {
-        startY: 42,
+        ...tableStyle,
+        startY,
         head: [COLUMNS[type]],
         body: rows.map(r => getRow(type, r)),
-        theme: 'striped',
-        headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', fontSize: 8 },
-        bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
-        alternateRowStyles: { fillColor: [239, 246, 255] },
-        margin: { left: 14, right: 14 },
       })
     }
 
+    drawFooters(doc, doc.internal.getNumberOfPages())
     doc.save(`relatorio_${type}_${start}_${end}.pdf`)
     toast.success('PDF gerado!')
   }
@@ -241,7 +381,6 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* Filtro por funcionário (só para ponto de funcionários) */}
         {currentType?.hasEmployeeFilter && data && (
           <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
             <div className="flex items-center gap-3 flex-wrap">
@@ -252,14 +391,14 @@ export default function Reports() {
                   {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                 </select>
               </div>
-              <div className="flex items-end gap-2 mt-5">
-                {rows.length > 0 && (<>
+              {rows.length > 0 && (
+                <div className="flex items-end mt-5">
                   <button onClick={exportPDF} className="btn-danger btn-sm">
                     <FileText size={14} />
                     {!filterEmployee ? 'PDF por funcionário' : 'PDF individual'}
                   </button>
-                </>)}
-              </div>
+                </div>
+              )}
             </div>
             {!filterEmployee && data && (
               <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
@@ -275,7 +414,7 @@ export default function Reports() {
           <p className="text-sm text-gray-500 dark:text-gray-400">
             <span className="font-semibold text-gray-900 dark:text-white">{rows.length}</span> registros
             {filterEmployee && employees.find(e => String(e.id) === filterEmployee) && (
-              <span className="ml-1">de <strong className="text-gray-800 dark:text-white">{employees.find(e => String(e.id) === filterEmployee)?.name}</strong></span>
+              <span className="ml-1">de <strong className="dark:text-white">{employees.find(e => String(e.id) === filterEmployee)?.name}</strong></span>
             )}
           </p>
           <div className="table-container">

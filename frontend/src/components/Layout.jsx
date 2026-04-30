@@ -7,6 +7,7 @@ import {
   BarChart2, Info, LogOut, Menu, X, ChevronDown, ChevronRight,
   Shield, UserCog, Settings, ScrollText, Sun, Moon, UserCheck
 } from 'lucide-react'
+import logo from '../../public/images/logo-emblem.png';
 
 const navItems = [
   { to: '/',             icon: LayoutDashboard, label: 'Dashboard',       exact: true },
@@ -44,12 +45,10 @@ function SidebarContent({ onClose }) {
       {/* Logo */}
       <div className="px-4 py-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Shield size={20} className="text-white" />
-          </div>
+          <img src={logo} alt="Logo" className="w-15 h-20 object-cover" />
           <div>
-            <p className="font-bold text-gray-900 dark:text-white text-sm">Sistema</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Embaixada</p>
+            <p className="font-bold text-gray-900 dark:text-white text-sm">Gestão Portaria</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Embassy of the Phillipines</p>
           </div>
         </div>
         <button onClick={toggle} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
@@ -126,8 +125,8 @@ export default function Layout() {
         <header className="lg:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
           <button onClick={() => setSidebarOpen(true)}><Menu size={22} className="text-gray-700 dark:text-gray-300" /></button>
           <div className="flex items-center gap-2">
-            <Shield size={18} className="text-blue-600" />
-            <span className="font-bold text-sm dark:text-white">Sistema Embaixada</span>
+            <img src={logo} alt="Logo" className="w-8 h-13 object-cover" />
+            <span className="font-bold text-sm dark:text-white">Gestão Portaria</span>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
