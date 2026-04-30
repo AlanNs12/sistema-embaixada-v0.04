@@ -4,7 +4,8 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import Modal from '../components/Modal'
 import DetailModal from '../components/DetailModal'
-import { Plus, CheckCircle, Package, Pencil, Eye } from 'lucide-react'
+import BarcodeScanner from '../components/BarcodeScanner'
+import { Plus, CheckCircle, Package, Pencil, Eye, ScanBarcode } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Packages() {
@@ -20,6 +21,8 @@ export default function Packages() {
   const [form, setForm] = useState({ delivery_company:'', tracking_code:'', recipient_employee_id:'', recipient_name:'', notes:'' })
   const [deliverForm, setDeliverForm] = useState({ delivered_to_id:'', delivered_to_name:'' })
   const [editForm, setEditForm] = useState({ delivery_company:'', tracking_code:'', recipient_name:'', recipient_employee_id:'', notes:'' })
+  // 'new' | 'edit' | null — qual modal está com o scanner aberto
+  const [scannerTarget, setScannerTarget] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -145,6 +148,20 @@ export default function Packages() {
       <DetailModal open={!!detail} onClose={() => setDetail(null)} type="package" record={detail} />
 
       {/* New package modal */}
+      {scannerTarget === 'new' && (
+        <BarcodeScanner
+          onScan={code => { setForm(f => ({ ...f, tracking_code: code })); setScannerTarget(null); toast.success('Código lido!') }}
+          onClose={() => setScannerTarget(null)}
+        />
+      )}
+
+      {scannerTarget === 'edit' && (
+        <BarcodeScanner
+          onScan={code => { setEditForm(f => ({ ...f, tracking_code: code })); setScannerTarget(null); toast.success('Código lido!') }}
+          onClose={() => setScannerTarget(null)}
+        />
+      )}
+
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Registrar Encomenda Recebida"
         footer={<><button onClick={() => setModalOpen(false)} className="btn-secondary">Cancelar</button><button onClick={handleSubmit} className="btn-primary">Registrar</button></>}>
         <div className="space-y-4">
@@ -152,7 +169,14 @@ export default function Packages() {
             <div className="form-group"><label className="label">Empresa Entregadora *</label>
               <input className="input" placeholder="Correios, JadLog..." value={form.delivery_company} onChange={e => setForm({ ...form, delivery_company: e.target.value })} /></div>
             <div className="form-group"><label className="label">Código de Rastreio</label>
-              <input className="input" value={form.tracking_code} onChange={e => setForm({ ...form, tracking_code: e.target.value })} /></div>
+              <div className="flex gap-2">
+                <input className="input" value={form.tracking_code} onChange={e => setForm({ ...form, tracking_code: e.target.value })} />
+                <button type="button" onClick={() => setScannerTarget('new')} title="Escanear código de barras"
+                  className="shrink-0 px-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-400 transition-colors">
+                  <ScanBarcode size={18} />
+                </button>
+              </div>
+            </div>
           </div>
           <div className="form-group"><label className="label">Funcionário Destinatário</label>
             <select className="input" value={form.recipient_employee_id} onChange={e => selectEmployee(e.target.value, 'recipient')}>
@@ -175,7 +199,14 @@ export default function Packages() {
               <div className="form-group"><label className="label">Empresa Entregadora</label>
                 <input className="input" value={editForm.delivery_company} onChange={e => setEditForm({ ...editForm, delivery_company: e.target.value })} /></div>
               <div className="form-group"><label className="label">Código de Rastreio</label>
-                <input className="input" value={editForm.tracking_code} onChange={e => setEditForm({ ...editForm, tracking_code: e.target.value })} /></div>
+                <div className="flex gap-2">
+                  <input className="input" value={editForm.tracking_code} onChange={e => setEditForm({ ...editForm, tracking_code: e.target.value })} />
+                  <button type="button" onClick={() => setScannerTarget('edit')} title="Escanear código de barras"
+                    className="shrink-0 px-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-400 transition-colors">
+                    <ScanBarcode size={18} />
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="form-group"><label className="label">Funcionário Destinatário</label>
               <select className="input" value={editForm.recipient_employee_id} onChange={e => selectEmployee(e.target.value, 'edit')}>
