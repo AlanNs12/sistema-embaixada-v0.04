@@ -6,6 +6,7 @@ frontend/node_modules/
 # ── ARQUIVOS DE AMBIENTE — NUNCA commitar ─────────────────────
 # Contêm senhas, IPs, chaves JWT — manter fora do git
 backend/.env
+backend/.env..example
 frontend/.env.local
 frontend/.env.*.local
 frontend/.env.local
