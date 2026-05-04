@@ -26,3 +26,4 @@ scripts/backups/*.sql.gz
 .DS_Store
 *.zip
 .claude/worktrees/pensive-kare-98223d/
+backend/.env.example
