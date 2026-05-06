@@ -19,6 +19,8 @@ export default defineConfig(({ mode }) => {
         '177.153.60.36:5173',
         'embassyphilippines.duckdns.org',
         'embassyphilippines.duckdns.org:5173',
+        'embaixadateste.alannascimento.site',
+        'alannascimento.site',
         'localhost:5173',
         '127.0.0.1:5173'
     ],
