@@ -1,7 +1,9 @@
 const router = require('express').Router();
+const { body } = require('express-validator');
 const pool = require('../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const audit = require('../middleware/audit');
+const validate = require('../middleware/validate');
 
 // GET /api/employees
 router.get('/', authenticate, async (req, res) => {
@@ -16,27 +18,34 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // POST /api/employees
-router.post('/', authenticate, authorize('super_admin', 'admin'), audit('CREATE', 'employee'), async (req, res) => {
-  const { name, position, department, email, phone } = req.body;
-  if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
-  try {
-    // Coloca o novo funcionário no final da ordem
-    const maxOrder = await pool.query('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM employees');
-    const next = maxOrder.rows[0].next;
-    const result = await pool.query(
-      `INSERT INTO employees (name, position, department, email, phone, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [name, position, department, email, phone, next]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+router.post('/',
+  authenticate, authorize('super_admin', 'admin'), audit('CREATE', 'employee'),
+  body('name').trim().isLength({ min: 2, max: 150 }).withMessage('Nome deve ter entre 2 e 150 caracteres'),
+  body('position').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 100 }).withMessage('Cargo muito longo'),
+  body('department').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 100 }).withMessage('Setor muito longo'),
+  body('email').optional({ nullable: true, checkFalsy: true }).isEmail().normalizeEmail().withMessage('Email inválido'),
+  body('phone').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 30 }).withMessage('Telefone muito longo'),
+  validate,
+  async (req, res) => {
+    const { name, position, department, email, phone } = req.body;
+    try {
+      const maxOrder = await pool.query('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM employees');
+      const next = maxOrder.rows[0].next;
+      const result = await pool.query(
+        `INSERT INTO employees (name, position, department, email, phone, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+        [name, position, department, email, phone, next]
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   }
-});
+);
 
 // PUT /api/employees/reorder  (deve vir ANTES de /:id)
 router.put('/reorder', authenticate, authorize('super_admin', 'admin'), async (req, res) => {
-  const { order } = req.body; // [{ id, sort_order }, ...]
+  const { order } = req.body;
   if (!Array.isArray(order)) return res.status(400).json({ error: 'order deve ser um array' });
   try {
     await Promise.all(
@@ -51,19 +60,28 @@ router.put('/reorder', authenticate, authorize('super_admin', 'admin'), async (r
 });
 
 // PUT /api/employees/:id
-router.put('/:id', authenticate, authorize('super_admin', 'admin'), audit('UPDATE', 'employee'), async (req, res) => {
-  const { name, position, department, email, phone, active } = req.body;
-  try {
-    await pool.query(
-      `UPDATE employees SET name=$1, position=$2, department=$3, email=$4, phone=$5,
-       active=$6, updated_at=NOW() WHERE id=$7`,
-      [name, position, department, email, phone, active, req.params.id]
-    );
-    res.json({ message: 'Funcionário atualizado' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+router.put('/:id',
+  authenticate, authorize('super_admin', 'admin'), audit('UPDATE', 'employee'),
+  body('name').trim().isLength({ min: 2, max: 150 }).withMessage('Nome deve ter entre 2 e 150 caracteres'),
+  body('position').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 100 }).withMessage('Cargo muito longo'),
+  body('department').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 100 }).withMessage('Setor muito longo'),
+  body('email').optional({ nullable: true, checkFalsy: true }).isEmail().normalizeEmail().withMessage('Email inválido'),
+  body('phone').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 30 }).withMessage('Telefone muito longo'),
+  validate,
+  async (req, res) => {
+    const { name, position, department, email, phone, active } = req.body;
+    try {
+      await pool.query(
+        `UPDATE employees SET name=$1, position=$2, department=$3, email=$4, phone=$5,
+         active=$6, updated_at=NOW() WHERE id=$7`,
+        [name, position, department, email, phone, active, req.params.id]
+      );
+      res.json({ message: 'Funcionário atualizado' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   }
-});
+);
 
 // --- ATTENDANCE ---
 

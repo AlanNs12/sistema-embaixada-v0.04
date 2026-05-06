@@ -1,7 +1,9 @@
 const router = require('express').Router();
+const { body } = require('express-validator');
 const pool = require('../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const audit = require('../middleware/audit');
+const validate = require('../middleware/validate');
 const { upload, saveImageToDB, updateImageEntity } = require('../config/upload');
 
 // GET /api/providers
@@ -17,35 +19,48 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // POST /api/providers
-router.post('/', authenticate, authorize('super_admin','admin'), upload.single('document_photo'), audit('CREATE','service_provider'), async (req, res) => {
-  const { name, company, notes } = req.body;
-  if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
-  try {
-    const result = await pool.query(
-      'INSERT INTO service_providers (name,company,notes) VALUES ($1,$2,$3) RETURNING *',
-      [name, company, notes]
-    );
-    const provider = result.rows[0];
-    if (req.file) await saveImageToDB(req.file, 'provider', provider.id);
-    res.status(201).json(provider);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
+router.post('/',
+  authenticate, authorize('super_admin','admin'), upload.single('document_photo'), audit('CREATE','service_provider'),
+  body('name').trim().isLength({ min: 2, max: 150 }).withMessage('Nome deve ter entre 2 e 150 caracteres'),
+  body('company').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 150 }).withMessage('Empresa muito longa'),
+  body('notes').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('Notas muito longas'),
+  validate,
+  async (req, res) => {
+    const { name, company, notes } = req.body;
+    try {
+      const result = await pool.query(
+        'INSERT INTO service_providers (name,company,notes) VALUES ($1,$2,$3) RETURNING *',
+        [name, company, notes]
+      );
+      const provider = result.rows[0];
+      if (req.file) await saveImageToDB(req.file, 'provider', provider.id);
+      res.status(201).json(provider);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  }
+);
 
 // PUT /api/providers/:id
-router.put('/:id', authenticate, authorize('super_admin','admin'), upload.single('document_photo'), audit('UPDATE','service_provider'), async (req, res) => {
-  const { name, company, notes, active } = req.body;
-  try {
-    await pool.query(
-      'UPDATE service_providers SET name=$1,company=$2,notes=$3,active=$4,updated_at=NOW() WHERE id=$5',
-      [name, company, notes, active!==false, req.params.id]
-    );
-    if (req.file) {
-      await pool.query("DELETE FROM document_images WHERE entity_type='provider' AND entity_id=$1", [req.params.id]);
-      await saveImageToDB(req.file, 'provider', req.params.id);
-    }
-    res.json({ message: 'Prestador atualizado' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
+router.put('/:id',
+  authenticate, authorize('super_admin','admin'), upload.single('document_photo'), audit('UPDATE','service_provider'),
+  body('name').trim().isLength({ min: 2, max: 150 }).withMessage('Nome deve ter entre 2 e 150 caracteres'),
+  body('company').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 150 }).withMessage('Empresa muito longa'),
+  body('notes').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('Notas muito longas'),
+  validate,
+  async (req, res) => {
+    const { name, company, notes, active } = req.body;
+    try {
+      await pool.query(
+        'UPDATE service_providers SET name=$1,company=$2,notes=$3,active=$4,updated_at=NOW() WHERE id=$5',
+        [name, company, notes, active!==false, req.params.id]
+      );
+      if (req.file) {
+        await pool.query("DELETE FROM document_images WHERE entity_type='provider' AND entity_id=$1", [req.params.id]);
+        await saveImageToDB(req.file, 'provider', req.params.id);
+      }
+      res.json({ message: 'Prestador atualizado' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  }
+);
 
 // GET /api/providers/visits
 router.get('/visits', authenticate, async (req, res) => {
@@ -73,35 +88,48 @@ router.get('/visits', authenticate, async (req, res) => {
 });
 
 // POST /api/providers/visits
-router.post('/visits', authenticate, upload.single('document_photo'), audit('CREATE','provider_visit'), async (req, res) => {
-  const { provider_id, visitor_name, company, reason, employee_id, notes } = req.body;
-  let name = visitor_name, comp = company;
-  if (provider_id) {
-    const p = await pool.query('SELECT * FROM service_providers WHERE id=$1', [provider_id]);
-    if (p.rows[0]) { name = name || p.rows[0].name; comp = comp || p.rows[0].company; }
+router.post('/visits',
+  authenticate, upload.single('document_photo'), audit('CREATE','provider_visit'),
+  body('visitor_name').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 150 }).withMessage('Nome do visitante muito longo'),
+  body('company').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 150 }).withMessage('Empresa muito longa'),
+  body('reason').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 200 }).withMessage('Motivo muito longo'),
+  body('notes').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('Notas muito longas'),
+  validate,
+  async (req, res) => {
+    const { provider_id, visitor_name, company, reason, employee_id, notes } = req.body;
+    let name = visitor_name, comp = company;
+    if (provider_id) {
+      const p = await pool.query('SELECT * FROM service_providers WHERE id=$1', [provider_id]);
+      if (p.rows[0]) { name = name || p.rows[0].name; comp = comp || p.rows[0].company; }
+    }
+    try {
+      const result = await pool.query(
+        `INSERT INTO service_provider_visits (provider_id,visitor_name,company,reason,employee_id,notes,created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+        [provider_id||null, name, comp, reason, employee_id||null, notes, req.user.id]
+      );
+      const visit = result.rows[0];
+      if (req.file) await saveImageToDB(req.file, 'provider_visit', visit.id);
+      res.status(201).json(visit);
+    } catch (err) { res.status(500).json({ error: err.message }); }
   }
-  try {
-    const result = await pool.query(
-      `INSERT INTO service_provider_visits (provider_id,visitor_name,company,reason,employee_id,notes,created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [provider_id||null, name, comp, reason, employee_id||null, notes, req.user.id]
-    );
-    const visit = result.rows[0];
-    if (req.file) await saveImageToDB(req.file, 'provider_visit', visit.id);
-    res.status(201).json(visit);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
+);
 
 // PUT /api/providers/visits/:id
-router.put('/visits/:id', authenticate, audit('UPDATE','provider_visit'), async (req, res) => {
-  const { exit_time, notes } = req.body;
-  try {
-    const result = await pool.query(
-      `UPDATE service_provider_visits SET exit_time=COALESCE($1,NOW()), notes=COALESCE($2,notes), updated_at=NOW() WHERE id=$3 RETURNING *`,
-      [exit_time||null, notes||null, req.params.id]
-    );
-    res.json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
+router.put('/visits/:id',
+  authenticate, audit('UPDATE','provider_visit'),
+  body('notes').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('Notas muito longas'),
+  validate,
+  async (req, res) => {
+    const { exit_time, notes } = req.body;
+    try {
+      const result = await pool.query(
+        `UPDATE service_provider_visits SET exit_time=COALESCE($1,NOW()), notes=COALESCE($2,notes), updated_at=NOW() WHERE id=$3 RETURNING *`,
+        [exit_time||null, notes||null, req.params.id]
+      );
+      res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  }
+);
 
 module.exports = router;

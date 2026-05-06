@@ -167,10 +167,10 @@ export default function Packages() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="form-group"><label className="label">Empresa Entregadora *</label>
-              <input className="input" placeholder="Correios, JadLog..." value={form.delivery_company} onChange={e => setForm({ ...form, delivery_company: e.target.value })} /></div>
+              <input className="input" placeholder="Correios, JadLog..." maxLength={100} value={form.delivery_company} onChange={e => setForm({ ...form, delivery_company: e.target.value })} /></div>
             <div className="form-group"><label className="label">Código de Rastreio</label>
               <div className="flex gap-2">
-                <input className="input" value={form.tracking_code} onChange={e => setForm({ ...form, tracking_code: e.target.value })} />
+                <input className="input" maxLength={100} value={form.tracking_code} onChange={e => setForm({ ...form, tracking_code: e.target.value })} />
                 <button type="button" onClick={() => setScannerTarget('new')} title="Escanear código de barras"
                   className="shrink-0 px-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-400 transition-colors">
                   <ScanBarcode size={18} />
@@ -184,9 +184,9 @@ export default function Packages() {
               {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
             </select></div>
           <div className="form-group"><label className="label">Nome do Destinatário</label>
-            <input className="input" value={form.recipient_name} onChange={e => setForm({ ...form, recipient_name: e.target.value })} /></div>
+            <input className="input" maxLength={150} value={form.recipient_name} onChange={e => setForm({ ...form, recipient_name: e.target.value })} /></div>
           <div className="form-group"><label className="label">Observações</label>
-            <textarea className="input" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+            <textarea className="input" rows={2} maxLength={500} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
         </div>
       </Modal>
 
@@ -197,10 +197,10 @@ export default function Packages() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group"><label className="label">Empresa Entregadora</label>
-                <input className="input" value={editForm.delivery_company} onChange={e => setEditForm({ ...editForm, delivery_company: e.target.value })} /></div>
+                <input className="input" maxLength={100} value={editForm.delivery_company} onChange={e => setEditForm({ ...editForm, delivery_company: e.target.value })} /></div>
               <div className="form-group"><label className="label">Código de Rastreio</label>
                 <div className="flex gap-2">
-                  <input className="input" value={editForm.tracking_code} onChange={e => setEditForm({ ...editForm, tracking_code: e.target.value })} />
+                  <input className="input" maxLength={100} value={editForm.tracking_code} onChange={e => setEditForm({ ...editForm, tracking_code: e.target.value })} />
                   <button type="button" onClick={() => setScannerTarget('edit')} title="Escanear código de barras"
                     className="shrink-0 px-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-400 transition-colors">
                     <ScanBarcode size={18} />
@@ -214,9 +214,9 @@ export default function Packages() {
                 {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
               </select></div>
             <div className="form-group"><label className="label">Nome do Destinatário</label>
-              <input className="input" value={editForm.recipient_name} onChange={e => setEditForm({ ...editForm, recipient_name: e.target.value })} /></div>
+              <input className="input" maxLength={150} value={editForm.recipient_name} onChange={e => setEditForm({ ...editForm, recipient_name: e.target.value })} /></div>
             <div className="form-group"><label className="label">Observações</label>
-              <textarea className="input" rows={2} value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} /></div>
+              <textarea className="input" rows={2} maxLength={500} value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} /></div>
           </div>
         )}
       </Modal>
@@ -239,7 +239,7 @@ export default function Packages() {
                 {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
               </select></div>
             <div className="form-group"><label className="label">Nome de quem recebeu</label>
-              <input className="input" value={deliverForm.delivered_to_name} onChange={e => setDeliverForm({ ...deliverForm, delivered_to_name: e.target.value })} /></div>
+              <input className="input" maxLength={150} value={deliverForm.delivered_to_name} onChange={e => setDeliverForm({ ...deliverForm, delivered_to_name: e.target.value })} /></div>
           </div>
         )}
       </Modal>

@@ -1,7 +1,9 @@
 const router = require('express').Router();
+const { body } = require('express-validator');
 const pool = require('../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const audit = require('../middleware/audit');
+const validate = require('../middleware/validate');
 
 // GET /api/outsourced
 router.get('/', authenticate, async (req, res) => {
@@ -12,27 +14,40 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // POST /api/outsourced
-router.post('/', authenticate, authorize('super_admin', 'admin'), audit('CREATE', 'outsourced_worker'), async (req, res) => {
-  const { name, role, company } = req.body;
-  if (!name || !role) return res.status(400).json({ error: 'Nome e função são obrigatórios' });
-  try {
-    const result = await pool.query(
-      'INSERT INTO outsourced_workers (name, role, company) VALUES ($1,$2,$3) RETURNING *',
-      [name, role, company]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
+router.post('/',
+  authenticate, authorize('super_admin', 'admin'), audit('CREATE', 'outsourced_worker'),
+  body('name').trim().isLength({ min: 2, max: 150 }).withMessage('Nome deve ter entre 2 e 150 caracteres'),
+  body('role').trim().isLength({ min: 1, max: 100 }).withMessage('Função é obrigatória e deve ter no máximo 100 caracteres'),
+  body('company').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 150 }).withMessage('Empresa muito longa'),
+  validate,
+  async (req, res) => {
+    const { name, role, company } = req.body;
+    try {
+      const result = await pool.query(
+        'INSERT INTO outsourced_workers (name, role, company) VALUES ($1,$2,$3) RETURNING *',
+        [name, role, company]
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  }
+);
 
 // PUT /api/outsourced/:id
-router.put('/:id', authenticate, authorize('super_admin', 'admin'), audit('UPDATE', 'outsourced_worker'), async (req, res) => {
-  const { name, role, company, active } = req.body;
-  try {
-    await pool.query('UPDATE outsourced_workers SET name=$1, role=$2, company=$3, active=$4 WHERE id=$5',
-      [name, role, company, active, req.params.id]);
-    res.json({ message: 'Terceirizado atualizado' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
+router.put('/:id',
+  authenticate, authorize('super_admin', 'admin'), audit('UPDATE', 'outsourced_worker'),
+  body('name').trim().isLength({ min: 2, max: 150 }).withMessage('Nome deve ter entre 2 e 150 caracteres'),
+  body('role').trim().isLength({ min: 1, max: 100 }).withMessage('Função inválida'),
+  body('company').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 150 }).withMessage('Empresa muito longa'),
+  validate,
+  async (req, res) => {
+    const { name, role, company, active } = req.body;
+    try {
+      await pool.query('UPDATE outsourced_workers SET name=$1, role=$2, company=$3, active=$4 WHERE id=$5',
+        [name, role, company, active, req.params.id]);
+      res.json({ message: 'Terceirizado atualizado' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  }
+);
 
 // GET /api/outsourced/attendance?date=...
 router.get('/attendance', authenticate, async (req, res) => {
@@ -74,7 +89,7 @@ router.post('/attendance', authenticate, authorize('super_admin', 'admin', 'port
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PUT /api/outsourced/attendance/:id — update a specific record (MISSING ROUTE — bug fix)
+// PUT /api/outsourced/attendance/:id
 router.put('/attendance/:id', authenticate, authorize('super_admin', 'admin', 'porteiro'), audit('UPDATE', 'outsourced_attendance'), async (req, res) => {
   const { entry_time, exit_time, notes } = req.body;
   try {

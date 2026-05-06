@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { NotFoundException } from '@zxing/library'
 import { X, Camera, RefreshCw } from 'lucide-react'
@@ -12,16 +13,37 @@ export default function BarcodeScanner({ onScan, onClose }) {
   const [error, setError] = useState(null)
   const [scanning, setScanning] = useState(false)
 
-  // Lista as câmeras disponíveis ao montar
+  // Solicita permissão explicitamente e lista as câmeras disponíveis
   useEffect(() => {
-    BrowserMultiFormatReader.listVideoInputDevices()
+    if (!window.isSecureContext) {
+      setError('O acesso à câmera requer HTTPS. Contate o administrador do sistema.')
+      return
+    }
+
+    // Solicita permissão via getUserMedia antes de enumerar dispositivos
+    // Isso garante que o popup de permissão do navegador seja exibido
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then(stream => {
+        // Encerra o stream temporário — só precisávamos da permissão
+        stream.getTracks().forEach(t => t.stop())
+        return BrowserMultiFormatReader.listVideoInputDevices()
+      })
       .then(devices => {
         setCameras(devices)
         // Prefere câmera traseira em mobile
         const back = devices.find(d => /back|rear|environment/i.test(d.label))
         setSelectedCamera((back || devices[0])?.deviceId || null)
       })
-      .catch(() => setError('Não foi possível listar as câmeras.'))
+      .catch(err => {
+        if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+          setError('Permissão de câmera negada. Clique no ícone de câmera 🔒 na barra de endereço, permita o acesso e recarregue a página.')
+        } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
+          setError('Nenhuma câmera encontrada neste dispositivo.')
+        } else {
+          setError('Não foi possível acessar a câmera. Verifique as permissões do navegador.')
+        }
+      })
   }, [])
 
   // Inicia/reinicia o scanner sempre que a câmera selecionada muda
@@ -42,12 +64,17 @@ export default function BarcodeScanner({ onScan, onClose }) {
           onScan(code)
         }
         if (err && !(err instanceof NotFoundException)) {
-          setError('Erro ao acessar câmera. Verifique as permissões.')
-          setScanning(false)
+          setError('Erro ao ler código. Reposicione a câmera.')
         }
       })
-      .catch(() => {
-        setError('Não foi possível acessar a câmera. Verifique as permissões do navegador.')
+      .catch(err => {
+        if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+          setError('Permissão de câmera negada. Clique no ícone de câmera 🔒 na barra de endereço, permita o acesso e recarregue a página.')
+        } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
+          setError('Nenhuma câmera encontrada neste dispositivo.')
+        } else {
+          setError('Não foi possível acessar a câmera. Verifique as permissões do navegador.')
+        }
         setScanning(false)
       })
 
@@ -61,8 +88,13 @@ export default function BarcodeScanner({ onScan, onClose }) {
     onClose()
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+  // createPortal renderiza o scanner direto no document.body,
+  // ficando acima de qualquer modal independentemente de z-index
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-black/80"
+      style={{ zIndex: 9999 }}
+    >
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -83,12 +115,10 @@ export default function BarcodeScanner({ onScan, onClose }) {
           {!error && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="relative w-56 h-32">
-                {/* Cantos da mira */}
                 <span className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-blue-400 rounded-tl" />
                 <span className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-blue-400 rounded-tr" />
                 <span className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-blue-400 rounded-bl" />
                 <span className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-blue-400 rounded-br" />
-                {/* Linha animada de scan */}
                 <div className="absolute inset-x-1 h-0.5 bg-blue-400/80 animate-scan" style={{ top: '50%' }} />
               </div>
             </div>
@@ -127,6 +157,7 @@ export default function BarcodeScanner({ onScan, onClose }) {
           <button onClick={handleClose} className="btn-secondary w-full">Cancelar</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
