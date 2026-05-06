@@ -24,7 +24,7 @@ app.use(cors({
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     // Em desenvolvimento libera localhost de qualquer porta
-    if (NODE_ENV === 'development' && /^http:\/\/localhost(:\d+)?$/.test(origin))
+    if (NODE_ENV === 'production' && /^http:\/\/localhost(:\d+)?$/.test(origin))
       return callback(null, true);
     callback(new Error(`Origem não autorizada: ${origin}`));
   },
