@@ -7,14 +7,23 @@ import DetailModal from '../components/DetailModal'
 import { useAuth } from '../contexts/AuthContext'
 import { Car, Plus, CheckCircle, Pencil, Eye } from 'lucide-react'
 
+// Normaliza qualquer valor de data (Date object, ISO string, date-only string) → 'YYYY-MM-DD'
+function toDateStr(v) {
+  if (!v) return ''
+  if (typeof v === 'string') return v.substring(0, 10)
+  return new Date(v).toISOString().substring(0, 10)
+}
+
 // Formata horário/data para exibição na tabela.
 // Se return_date existir e for diferente da data de saída, mostra "dd/mm HH:mm".
 // Caso contrário mostra só "HH:mm".
 function fmtVehicleTime(time, thisDate, refDate) {
   if (!time) return null
-  const t = time.substring(0, 5)
-  if (thisDate && refDate && thisDate !== refDate) {
-    const [y, m, d] = thisDate.split('-')
+  const t = String(time).substring(0, 5)
+  const d1 = toDateStr(thisDate)
+  const d2 = toDateStr(refDate)
+  if (d1 && d2 && d1 !== d2) {
+    const [, m, d] = d1.split('-')
     return `${d}/${m} ${t}`
   }
   return t
@@ -115,9 +124,11 @@ export default function Vehicles() {
           <div className="flex flex-wrap gap-2">
             {data.vehicles_out.map(v => {
               const today = format(new Date(), 'yyyy-MM-dd')
-              const saiu = v.date !== today
-                ? `${v.date.split('-').reverse().slice(0, 2).join('/')} ${v.departure_time}`
-                : `hoje às ${v.departure_time}`
+              const vDateStr = toDateStr(v.date)
+              const depTime = String(v.departure_time).substring(0, 5)
+              const saiu = vDateStr !== today
+                ? `${vDateStr.split('-').reverse().slice(0, 2).join('/')} ${depTime}`
+                : `hoje às ${depTime}`
               return (
                 <button key={v.id}
                   onClick={() => canEdit && openReturnModal(v)}
@@ -144,7 +155,7 @@ export default function Vehicles() {
               : data.logs.length === 0
               ? <tr><td colSpan={9} className="text-center py-8 text-gray-400">Nenhum registro nesta data</td></tr>
               : data.logs.map(log => {
-                  const multiDay = log.return_date && log.return_date !== log.date
+                  const multiDay = log.return_date && toDateStr(log.return_date) !== toDateStr(log.date)
                   const departureStr = fmtVehicleTime(log.departure_time, log.date, multiDay ? log.return_date : null)
                   const returnStr = fmtVehicleTime(log.return_time, log.return_date || log.date, multiDay ? log.date : null)
                   return (
@@ -221,7 +232,7 @@ export default function Vehicles() {
               <p className="font-mono font-bold text-lg dark:text-white">{returnModal.plate}</p>
               <p className="text-gray-500 dark:text-gray-400">{returnModal.model}</p>
               <p className="text-sm text-gray-400 mt-1">
-                Saiu em {returnModal.date.split('-').reverse().join('/')} às {returnModal.departure_time}
+                Saiu em {toDateStr(returnModal.date).split('-').reverse().join('/')} às {String(returnModal.departure_time).substring(0, 5)}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
