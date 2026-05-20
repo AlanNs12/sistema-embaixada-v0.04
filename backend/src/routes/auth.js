@@ -62,4 +62,39 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
+// PUT /api/auth/password
+router.put('/password',
+  authenticate,
+  body('currentPassword').isString().isLength({ min: 1, max: 128 }),
+  body('newPassword').isLength({ min: 8, max: 128 }).withMessage('Mínimo 8 caracteres'),
+  body('confirmPassword').custom((v, { req }) => v === req.body.newPassword)
+    .withMessage('As senhas não coincidem'),
+  validate,
+  async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    try {
+      const { rows } = await pool.query(
+        'SELECT password_hash FROM users WHERE id = $1',
+        [req.user.id]
+      );
+      const valid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+      if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
+
+      const hash = await bcrypt.hash(newPassword, 10);
+      await pool.query(
+        'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+        [hash, req.user.id]
+      );
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, user_name, action, entity, ip_address)
+         VALUES ($1, $2, 'CHANGE_PASSWORD', 'auth', $3)`,
+        [req.user.id, req.user.name, req.ip]
+      );
+      res.json({ message: 'Senha alterada com sucesso' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
 module.exports = router;

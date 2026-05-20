@@ -51,6 +51,9 @@ export default function Vehicles() {
 
   const handleSubmit = async () => {
     if (!form.vehicle_id || !form.departure_time) return toast.error('Preencha os campos obrigatórios')
+    const outIds = new Set(data.vehicles_out.map(v => String(v.vehicle_id)))
+    if (outIds.has(String(form.vehicle_id)))
+      return toast.error('Este veículo já possui uma saída em aberto. Registre o retorno antes de cadastrar uma nova saída.')
     try {
       await api.post('/vehicles/logs', { ...form, date })
       toast.success('Saída registrada!')
@@ -61,10 +64,21 @@ export default function Vehicles() {
   }
 
   const handleReturn = async () => {
+    if (returnTime) {
+      const depDateStr = returnModal.date instanceof Date
+        ? returnModal.date.toISOString().split('T')[0]
+        : String(returnModal.date).substring(0, 10)
+      const depTimeStr = String(returnModal.departure_time).substring(0, 5)
+      const retDateStr = returnDate || format(new Date(), 'yyyy-MM-dd')
+      const departureMs = new Date(`${depDateStr}T${depTimeStr}:00`).getTime()
+      const returnMs    = new Date(`${retDateStr}T${returnTime}:00`).getTime()
+      if (returnMs < departureMs)
+        return toast.error('O horário de retorno não pode ser anterior à saída.')
+    }
     try {
       await api.put(`/vehicles/logs/${returnModal.id}`, { return_time: returnTime, return_date: returnDate })
       toast.success('Retorno registrado!'); setReturnModal(null); load()
-    } catch (e) { toast.error('Erro') }
+    } catch (e) { toast.error(e.response?.data?.error || 'Erro') }
   }
 
   const handleSaveObs = async () => {
@@ -168,7 +182,14 @@ export default function Vehicles() {
             <label className="label">Veículo *</label>
             <select className="input" value={form.vehicle_id} onChange={e => setForm({ ...form, vehicle_id: e.target.value })}>
               <option value="">Selecione...</option>
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.model} — {v.plate}</option>)}
+              {vehicles.map(v => {
+                const isOut = data.vehicles_out.some(o => String(o.vehicle_id) === String(v.id))
+                return (
+                  <option key={v.id} value={v.id} disabled={isOut}>
+                    {v.model} — {v.plate}{isOut ? ' (fora — aguardando retorno)' : ''}
+                  </option>
+                )
+              })}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -211,6 +232,21 @@ export default function Vehicles() {
                 <input type="time" className="input" value={returnTime} onChange={e => setReturnTime(e.target.value)} />
               </div>
             </div>
+            {(() => {
+              if (!returnTime) return null
+              const depDateStr = returnModal.date instanceof Date
+                ? returnModal.date.toISOString().split('T')[0]
+                : String(returnModal.date).substring(0, 10)
+              const depTimeStr = String(returnModal.departure_time).substring(0, 5)
+              const retDateStr = returnDate || format(new Date(), 'yyyy-MM-dd')
+              const invalid = new Date(`${retDateStr}T${returnTime}:00`) < new Date(`${depDateStr}T${depTimeStr}:00`)
+              if (!invalid) return null
+              return (
+                <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                  O horário de retorno não pode ser anterior à saída ({depDateStr.split('-').reverse().join('/')} às {depTimeStr}).
+                </p>
+              )
+            })()}
           </div>
         )}
       </Modal>

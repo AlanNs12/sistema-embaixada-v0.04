@@ -140,7 +140,7 @@ router.get('/reports/:type', authenticate, async (req, res) => {
            FROM service_provider_visits spv
            LEFT JOIN service_providers sp ON spv.provider_id=sp.id
            LEFT JOIN employees e ON spv.employee_id=e.id
-           WHERE DATE(spv.entry_time) BETWEEN $1 AND $2 ORDER BY spv.entry_time DESC`, [start, end]); break;
+           WHERE (spv.entry_time AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN $1 AND $2 ORDER BY spv.entry_time DESC`, [start, end]); break;
       case 'consular':
         result = await pool.query(
           `SELECT ca.*, e.name as employee_name FROM consular_appointments ca
@@ -152,7 +152,7 @@ router.get('/reports/:type', authenticate, async (req, res) => {
            FROM packages p
            LEFT JOIN employees e ON p.recipient_employee_id=e.id
            LEFT JOIN employees e2 ON p.delivered_to_id=e2.id
-           WHERE DATE(p.received_at) BETWEEN $1 AND $2 ORDER BY p.received_at DESC`, [start, end]); break;
+           WHERE (p.received_at AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN $1 AND $2 ORDER BY p.received_at DESC`, [start, end]); break;
       case 'visitors':
         result = await pool.query(
           `SELECT vl.*, e.name as employee_name FROM visitor_logs vl

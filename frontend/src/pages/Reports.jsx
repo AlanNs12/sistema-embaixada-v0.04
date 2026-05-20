@@ -96,10 +96,12 @@ const COLUMNS = {
 const fmtDate = (v) => {
   if (!v) return '—'
   try {
-    const s = typeof v === 'string' ? v.substring(0, 10) : format(new Date(v), 'yyyy-MM-dd')
+    // Usa toISOString() para datas não-string (Date objects retornados pelo pg)
+    // evitando que o fuso horário UTC-3 desloque as datas 1 dia para trás
+    const s = typeof v === 'string' ? v.substring(0, 10) : new Date(v).toISOString().substring(0, 10)
     const [y, m, d] = s.split('-')
     return `${d}/${m}/${y}`
-  } catch { return v }
+  } catch { return String(v) }
 }
 const fmtTime = (v) => {
   if (!v) return '—'

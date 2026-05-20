@@ -81,6 +81,13 @@ router.post('/logs',
     if (!vehicle_id || !departure_time) return res.status(400).json({ error: 'Veículo e horário de saída são obrigatórios' });
     const d = date || new Date().toISOString().split('T')[0];
     try {
+      const open = await pool.query(
+        'SELECT id FROM vehicle_logs WHERE vehicle_id=$1 AND return_time IS NULL LIMIT 1',
+        [vehicle_id]
+      );
+      if (open.rows.length > 0)
+        return res.status(409).json({ error: 'Este veículo já possui uma saída em aberto. Registre o retorno antes de cadastrar uma nova saída.' });
+
       const result = await pool.query(
         `INSERT INTO vehicle_logs (vehicle_id,date,departure_time,driver,passengers,reason,observations,created_by)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
@@ -94,6 +101,28 @@ router.post('/logs',
 router.put('/logs/:id', authenticate, authorize('super_admin','admin','porteiro'), audit('UPDATE','vehicle_log'), async (req, res) => {
   const { return_time, return_date, driver, passengers, reason, observations } = req.body;
   try {
+    if (return_time) {
+      const existing = await pool.query(
+        'SELECT date, departure_time FROM vehicle_logs WHERE id=$1',
+        [req.params.id]
+      );
+      if (existing.rows.length === 0)
+        return res.status(404).json({ error: 'Registro não encontrado' });
+
+      const row = existing.rows[0];
+      const depDateStr = row.date instanceof Date
+        ? row.date.toISOString().split('T')[0]
+        : String(row.date).substring(0, 10);
+      const depTimeStr = String(row.departure_time).substring(0, 5);
+      const retDateStr = return_date || new Date().toISOString().split('T')[0];
+
+      const departureMs = new Date(`${depDateStr}T${depTimeStr}:00`).getTime();
+      const returnMs    = new Date(`${retDateStr}T${return_time}:00`).getTime();
+
+      if (returnMs < departureMs)
+        return res.status(409).json({ error: 'O horário de retorno não pode ser anterior à saída.' });
+    }
+
     const result = await pool.query(
       `UPDATE vehicle_logs SET
          return_time  = COALESCE($1, return_time),

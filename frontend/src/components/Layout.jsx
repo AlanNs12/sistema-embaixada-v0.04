@@ -5,9 +5,10 @@ import { useTheme } from '../contexts/ThemeContext'
 import {
   LayoutDashboard, Users, Car, Truck, Package, ClipboardList,
   BarChart2, Info, LogOut, Menu, X, ChevronDown, ChevronRight,
-  Shield, UserCog, Settings, ScrollText, Sun, Moon, UserCheck
+  Shield, UserCog, Settings, ScrollText, Sun, Moon, UserCheck, KeyRound
 } from 'lucide-react'
 import logo from '../../public/images/logo-emblem.png';
+import ChangePasswordModal from './ChangePasswordModal'
 
 const navItems = [
   { to: '/',             icon: LayoutDashboard, label: 'Dashboard',       exact: true },
@@ -37,6 +38,7 @@ function SidebarContent({ onClose, isMobile }) {
   const { dark, toggle } = useTheme()
   const navigate = useNavigate()
   const [adminOpen, setAdminOpen] = useState(false)
+  const [pwOpen, setPwOpen] = useState(false)
 
   const handleLogout = () => { logout(); navigate('/login') }
 
@@ -89,14 +91,22 @@ function SidebarContent({ onClose, isMobile }) {
       {/* User footer */}
       <div className="px-3 py-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3 px-2 py-2 mb-2">
-          <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
             <span className="text-blue-700 dark:text-blue-300 font-bold text-sm">{user?.name?.[0]?.toUpperCase()}</span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{ROLE_LABEL[user?.role] || user?.role}</p>
           </div>
+          <button
+            onClick={() => setPwOpen(true)}
+            title="Alterar senha"
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex-shrink-0"
+          >
+            <KeyRound size={15} />
+          </button>
         </div>
+        <ChangePasswordModal open={pwOpen} onClose={() => setPwOpen(false)} />
         <button onClick={handleLogout} className="sidebar-link-inactive w-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
           <LogOut size={16} /><span>Sair</span>
         </button>
