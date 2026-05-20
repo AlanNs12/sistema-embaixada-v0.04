@@ -6,6 +6,26 @@ const audit = require('../middleware/audit');
 const validate = require('../middleware/validate');
 const { upload, saveImageToDB } = require('../config/upload');
 
+// Busca visitantes em entradas anteriores (para reutilizar dados do formulário)
+router.get('/search', authenticate, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (q.length < 2) return res.json([]);
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT ON (visitor_name, document_number)
+         vl.id, visitor_name, document_number, reason, employee_id,
+         e.name as employee_name, date
+       FROM visitor_logs vl
+       LEFT JOIN employees e ON vl.employee_id = e.id
+       WHERE vl.visitor_name ILIKE $1 OR vl.document_number ILIKE $1
+       ORDER BY visitor_name, document_number, date DESC
+       LIMIT 10`,
+      [`%${q}%`]
+    );
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/', authenticate, async (req, res) => {
   const date = req.query.date || new Date().toISOString().split('T')[0];
   try {
@@ -34,12 +54,13 @@ router.post('/',
   validate,
   async (req, res) => {
     const { visitor_name, document_number, reason, employee_id, notes } = req.body;
-    const date = new Date().toISOString().split('T')[0];
     try {
       const result = await pool.query(
+        // (NOW() AT TIME ZONE 'America/Sao_Paulo')::date garante que a data
+        // salva reflete o dia local do Brasil, não o dia UTC do servidor
         `INSERT INTO visitor_logs (visitor_name,document_number,reason,employee_id,entry_time,date,notes,created_by)
-         VALUES ($1,$2,$3,$4,NOW(),$5,$6,$7) RETURNING *`,
-        [visitor_name, document_number||null, reason, employee_id||null, date, notes, req.user.id]
+         VALUES ($1,$2,$3,$4,NOW(),(NOW() AT TIME ZONE 'America/Sao_Paulo')::date,$5,$6) RETURNING *`,
+        [visitor_name, document_number||null, reason, employee_id||null, notes, req.user.id]
       );
       const vis = result.rows[0];
       if (req.file) await saveImageToDB(req.file, 'visitor', vis.id);

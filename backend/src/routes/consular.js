@@ -6,6 +6,26 @@ const audit = require('../middleware/audit');
 const validate = require('../middleware/validate');
 const { upload, saveImageToDB } = require('../config/upload');
 
+// Busca atendimentos anteriores para reutilizar dados no formulário
+router.get('/search', authenticate, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (q.length < 2) return res.json([]);
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT ON (visitor_name)
+         ca.id, visitor_name, visit_reason, employee_id,
+         e.name as employee_name, date
+       FROM consular_appointments ca
+       LEFT JOIN employees e ON ca.employee_id = e.id
+       WHERE ca.visitor_name ILIKE $1
+       ORDER BY visitor_name, date DESC
+       LIMIT 10`,
+      [`%${q}%`]
+    );
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/', authenticate, async (req, res) => {
   const date = req.query.date || new Date().toISOString().split('T')[0];
   try {
@@ -33,12 +53,11 @@ router.post('/',
   validate,
   async (req, res) => {
     const { visitor_name, visit_reason, employee_id, scheduled_time, notes } = req.body;
-    const date = new Date().toISOString().split('T')[0];
     try {
       const result = await pool.query(
         `INSERT INTO consular_appointments (visitor_name,visit_reason,employee_id,scheduled_time,entry_time,date,notes,created_by)
-         VALUES ($1,$2,$3,$4,NOW(),$5,$6,$7) RETURNING *`,
-        [visitor_name, visit_reason, employee_id||null, scheduled_time||null, date, notes, req.user.id]
+         VALUES ($1,$2,$3,$4,NOW(),(NOW() AT TIME ZONE 'America/Sao_Paulo')::date,$5,$6) RETURNING *`,
+        [visitor_name, visit_reason, employee_id||null, scheduled_time||null, notes, req.user.id]
       );
       const appt = result.rows[0];
       if (req.file) await saveImageToDB(req.file, 'consular', appt.id);

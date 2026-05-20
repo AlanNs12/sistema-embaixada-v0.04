@@ -1,12 +1,26 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import api from '../api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import Modal from '../components/Modal'
 import DetailModal from '../components/DetailModal'
-import DocImage from '../components/DocImage'
-import { Plus, LogOut, Eye } from 'lucide-react'
+import { Plus, LogOut, Eye, Search, History } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+
+function dataUrlToFile(dataUrl, filename, mimeType) {
+  const base64 = dataUrl.split(',')[1]
+  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+  return new File([bytes], filename || 'documento.jpg', { type: mimeType || 'image/jpeg' })
+}
+
+const fmtDate = (v) => {
+  if (!v) return ''
+  try {
+    const s = typeof v === 'string' ? v.substring(0, 10) : new Date(v).toISOString().substring(0, 10)
+    const [y, m, d] = s.split('-')
+    return `${d}/${m}/${y}`
+  } catch { return '' }
+}
 
 export default function Consular() {
   const { canEdit } = useAuth()
@@ -19,6 +33,10 @@ export default function Consular() {
   const [form, setForm] = useState({ visitor_name: '', visit_reason: '', employee_id: '', scheduled_time: '', notes: '' })
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
+  const [photoFromPrevious, setPhotoFromPrevious] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const searchTimeout = useRef(null)
 
   const load = async () => {
     setLoading(true)
@@ -30,6 +48,49 @@ export default function Consular() {
   }
   useEffect(() => { load() }, [date])
 
+  const closeModal = () => {
+    setModalOpen(false)
+    setForm({ visitor_name: '', visit_reason: '', employee_id: '', scheduled_time: '', notes: '' })
+    setPhoto(null); setPhotoPreview(null); setPhotoFromPrevious(false)
+    setSearchQuery(''); setSearchResults([])
+    clearTimeout(searchTimeout.current)
+  }
+
+  const handleSearch = (value) => {
+    setSearchQuery(value)
+    clearTimeout(searchTimeout.current)
+    if (value.trim().length < 2) { setSearchResults([]); return }
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await api.get(`/consular/search?q=${encodeURIComponent(value.trim())}`)
+        setSearchResults(res.data)
+      } catch (e) {}
+    }, 300)
+  }
+
+  const selectPrevious = async (v) => {
+    setForm({
+      visitor_name: v.visitor_name,
+      visit_reason: v.visit_reason || '',
+      employee_id: v.employee_id ? String(v.employee_id) : '',
+      scheduled_time: '',
+      notes: '',
+    })
+    setSearchQuery(''); setSearchResults([])
+    setPhoto(null); setPhotoPreview(null); setPhotoFromPrevious(false)
+    if (v.id) {
+      try {
+        const res = await api.get(`/images/consular/${v.id}`)
+        if (res.data?.src) {
+          const file = dataUrlToFile(res.data.src, res.data.original_name, res.data.mime_type)
+          setPhoto(file)
+          setPhotoPreview(res.data.src)
+          setPhotoFromPrevious(true)
+        }
+      } catch (_) { /* sem foto — ok */ }
+    }
+  }
+
   const handleSubmit = async () => {
     if (!form.visitor_name) return toast.error('Nome obrigatório')
     const fd = new FormData()
@@ -38,9 +99,7 @@ export default function Consular() {
     try {
       await api.post('/consular', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       toast.success('Atendimento registrado!')
-      setModalOpen(false)
-      setForm({ visitor_name: '', visit_reason: '', employee_id: '', scheduled_time: '', notes: '' })
-      setPhoto(null); setPhotoPreview(null); load()
+      closeModal(); load()
     } catch (e) { toast.error('Erro') }
   }
 
@@ -58,7 +117,11 @@ export default function Consular() {
         </div>
         <div className="flex gap-3">
           <input type="date" className="input w-auto" value={date} onChange={e => setDate(e.target.value)} />
-          {canEdit && <button onClick={() => setModalOpen(true)} className="btn-primary"><Plus size={16} /> Novo Atendimento</button>}
+          {canEdit && (
+            <button onClick={() => { setModalOpen(true); setSearchQuery(''); setSearchResults([]) }} className="btn-primary">
+              <Plus size={16} /> Novo Atendimento
+            </button>
+          )}
         </div>
       </div>
 
@@ -118,10 +181,47 @@ export default function Consular() {
         </table>
       </div>
 
-      {/* Novo atendimento */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Novo Atendimento Consular"
-        footer={<><button onClick={() => setModalOpen(false)} className="btn-secondary">Cancelar</button><button onClick={handleSubmit} className="btn-primary">Registrar</button></>}>
+      <Modal open={modalOpen} onClose={closeModal} title="Novo Atendimento Consular"
+        footer={<><button onClick={closeModal} className="btn-secondary">Cancelar</button><button onClick={handleSubmit} className="btn-primary">Registrar</button></>}>
         <div className="space-y-4">
+
+          {/* ── Busca de atendimento anterior ────────────────── */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3">
+            <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-1">
+              <History size={13} /> Buscar atendimento anterior (preenche o formulário automaticamente)
+            </p>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                className="input pl-8 text-sm"
+                placeholder="Nome do visitante..."
+                value={searchQuery}
+                onChange={e => handleSearch(e.target.value)}
+              />
+            </div>
+            {searchResults.length > 0 && (
+              <div className="mt-1 border border-blue-200 dark:border-blue-700 rounded-lg overflow-hidden">
+                {searchResults.map((r, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => selectPrevious(r)}
+                    className="w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-blue-800/40 border-b last:border-b-0 border-blue-100 dark:border-blue-700/50 transition-colors"
+                  >
+                    <p className="text-sm font-medium dark:text-white">{r.visitor_name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Último atendimento: {fmtDate(r.date)}
+                      {r.employee_name && <span> · {r.employee_name}</span>}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+            {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+              <p className="text-xs text-gray-400 mt-1 text-center">Nenhum atendimento anterior encontrado</p>
+            )}
+          </div>
+
           <div className="form-group"><label className="label">Nome do Visitante *</label>
             <input className="input" value={form.visitor_name} onChange={e => setForm({ ...form, visitor_name: e.target.value })} /></div>
           <div className="form-group"><label className="label">Motivo</label>
@@ -137,17 +237,32 @@ export default function Consular() {
           </div>
           <div className="form-group">
             <label className="label">Foto do Documento</label>
+            {photoPreview && (
+              <div className="relative inline-block mb-2">
+                <img src={photoPreview} alt="doc" className="h-24 rounded-lg object-cover border" />
+                {photoFromPrevious && (
+                  <span className="absolute top-1 left-1 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                    atend. anterior
+                  </span>
+                )}
+              </div>
+            )}
             <input type="file" accept="image/*" capture="environment"
-              onChange={e => { const f = e.target.files[0]; setPhoto(f); setPhotoPreview(f ? URL.createObjectURL(f) : null) }}
+              onChange={e => {
+                const f = e.target.files[0]
+                setPhoto(f); setPhotoPreview(f ? URL.createObjectURL(f) : null)
+                setPhotoFromPrevious(false)
+              }}
               className="input text-sm dark:text-gray-300" />
-            {photoPreview && <img src={photoPreview} alt="doc" className="mt-2 h-24 rounded-lg object-cover border" />}
+            <p className="text-xs text-gray-400 mt-1">
+              {photoFromPrevious ? 'Foto carregada do atendimento anterior — tire uma nova para substituir' : 'No celular abre a câmera automaticamente'}
+            </p>
           </div>
           <div className="form-group"><label className="label">Observações</label>
             <textarea className="input" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
         </div>
       </Modal>
 
-      {/* Modal de detalhes */}
       <DetailModal open={!!detail} onClose={() => setDetail(null)} type="consular" record={detail} />
     </div>
   )
