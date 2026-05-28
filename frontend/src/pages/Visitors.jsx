@@ -4,7 +4,8 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import Modal from '../components/Modal'
 import DetailModal from '../components/DetailModal'
-import { Plus, LogOut, UserCheck, Eye, Search, History } from 'lucide-react'
+import CameraCapture from '../components/CameraCapture'
+import { Plus, LogOut, UserCheck, Eye, Search, History, Camera, Image } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 // Converte data-URL (base64) em objeto File para reenvio via multipart
@@ -35,6 +36,8 @@ export default function Visitors() {
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
   const [photoFromPrevious, setPhotoFromPrevious] = useState(false)
+  const [cameraOpen, setCameraOpen] = useState(false)
+  const galleryInputRef = useRef(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const searchTimeout = useRef(null)
@@ -250,23 +253,56 @@ export default function Visitors() {
                     visita anterior
                   </span>
                 )}
+                <button
+                  onClick={() => { setPhoto(null); setPhotoPreview(null); setPhotoFromPrevious(false) }}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                >
+                  ×
+                </button>
               </div>
             )}
-            <input type="file" accept="image/*" capture="environment"
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCameraOpen(true)}
+                className="btn-secondary flex items-center gap-2 text-sm"
+              >
+                <Camera size={16} /> Tirar Foto
+              </button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="btn-secondary flex items-center gap-2 text-sm"
+              >
+                <Image size={16} /> Buscar da Galeria
+              </button>
+            </div>
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
               onChange={e => {
                 const f = e.target.files[0]
-                setPhoto(f); setPhotoPreview(f ? URL.createObjectURL(f) : null)
-                setPhotoFromPrevious(false)
+                if (f) { setPhoto(f); setPhotoPreview(URL.createObjectURL(f)); setPhotoFromPrevious(false) }
+                e.target.value = ''
               }}
-              className="input text-sm dark:text-gray-300" />
+              className="hidden"
+            />
             <p className="text-xs text-gray-400 mt-1">
-              {photoFromPrevious ? 'Foto carregada da visita anterior — tire uma nova para substituir' : 'No celular abre a câmera automaticamente'}
+              {photo ? 'Foto selecionada' : photoFromPrevious ? 'Foto da visita anterior' : 'Tire uma foto ou escolha da galeria'}
             </p>
           </div>
           <div className="form-group"><label className="label">Observações</label>
             <input className="input" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
         </div>
       </Modal>
+
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={file => { setPhoto(file); setPhotoPreview(URL.createObjectURL(file)); setPhotoFromPrevious(false); setCameraOpen(false) }}
+          onClose={() => setCameraOpen(false)}
+        />
+      )}
 
       <DetailModal open={!!detail} onClose={() => setDetail(null)} type="visitor" record={detail} />
     </div>

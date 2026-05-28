@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import api from '../api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import Modal from '../components/Modal'
 import DetailModal from '../components/DetailModal'
 import DocImage from '../components/DocImage'
-import { Plus, LogOut, Eye } from 'lucide-react'
+import CameraCapture from '../components/CameraCapture'
+import { Plus, LogOut, Eye, Camera, Image } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function ServiceProviders() {
@@ -21,6 +22,8 @@ export default function ServiceProviders() {
   const [form, setForm] = useState({ provider_id: '', visitor_name: '', company: '', reason: '', employee_id: '', notes: '' })
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
+  const [cameraOpen, setCameraOpen] = useState(false)
+  const galleryInputRef = useRef(null)
 
   const load = async () => {
     setLoading(true)
@@ -156,13 +159,57 @@ export default function ServiceProviders() {
             </select></div>
           <div className="form-group">
             <label className="label">Foto do Documento</label>
-            <input type="file" accept="image/*" capture="environment"
-              onChange={e => { const f = e.target.files[0]; setPhoto(f); setPhotoPreview(f ? URL.createObjectURL(f) : null) }}
-              className="input text-sm dark:text-gray-300" />
-            {photoPreview && <img src={photoPreview} alt="doc" className="mt-2 h-24 rounded-lg object-cover border" />}
+            {photoPreview && (
+              <div className="relative inline-block mb-2">
+                <img src={photoPreview} alt="doc" className="h-24 rounded-lg object-cover border" />
+                <button
+                  onClick={() => { setPhoto(null); setPhotoPreview(null) }}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCameraOpen(true)}
+                className="btn-secondary flex items-center gap-2 text-sm"
+              >
+                <Camera size={16} /> Tirar Foto
+              </button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="btn-secondary flex items-center gap-2 text-sm"
+              >
+                <Image size={16} /> Buscar da Galeria
+              </button>
+            </div>
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              onChange={e => {
+                const f = e.target.files[0]
+                if (f) { setPhoto(f); setPhotoPreview(URL.createObjectURL(f)) }
+                e.target.value = ''
+              }}
+              className="hidden"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              {photo ? 'Foto selecionada' : 'Tire uma foto ou escolha da galeria'}
+            </p>
           </div>
         </div>
       </Modal>
+
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={file => { setPhoto(file); setPhotoPreview(URL.createObjectURL(file)); setCameraOpen(false) }}
+          onClose={() => setCameraOpen(false)}
+        />
+      )}
 
       <DetailModal open={!!detail} onClose={() => setDetail(null)} type="provider_visit" record={detail} />
     </div>

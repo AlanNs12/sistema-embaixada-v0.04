@@ -31,7 +31,7 @@ const PDF_CONFIG = {
   corLinhaAlternada: [239, 246, 255],
 
   // Texto do rodapé de cada página. Use null para não exibir.
-  rodape: 'Documento gerado automaticamente pelo Sistema de Acompanhamento da Portaria',
+  rodape: 'Documento gerado automaticamente pelo Sistema de Gestão da Portaria',
 
   // Orientação: 'landscape' (horizontal) ou 'portrait' (vertical)
   orientacao: 'landscape',
@@ -86,7 +86,7 @@ const REPORT_TYPES = [
 const COLUMNS = {
   employee_attendance:  ['Data', 'Funcionário', 'Setor', 'Entrada', 'Saída Almoço', 'Retorno', 'Saída', 'Observação'],
   outsourced_attendance:['Data', 'Nome', 'Função', 'Empresa', 'Entrada', 'Saída'],
-  vehicles:             ['Data', 'Placa', 'Modelo', 'Saída', 'Retorno', 'Condutor', 'Motivo', 'Observações'],
+  vehicles:             ['Data', 'Placa', 'Modelo', 'Saída', 'Retorno', 'Condutor', 'Passageiros', 'Observações'],
   providers:            ['Data/Hora', 'Nome', 'Empresa', 'Motivo', 'Funcionário', 'Entrada', 'Saída'],
   consular:             ['Data', 'Visitante', 'Motivo', 'Funcionário', 'Agendado', 'Entrada', 'Saída'],
   packages:             ['Data', 'Destinatário', 'Empresa', 'Rastreio', 'Entregue a', 'Status'],
@@ -123,7 +123,7 @@ function getRow(type, row) {
       const ret = row.return_time
         ? (multiDay ? `${fmtDate(row.return_date)} ${fmtTime(row.return_time)}` : row.return_time)
         : '—'
-      return [fmtDate(row.date), row.plate, row.model, dep, ret, row.driver||'—', row.reason||'—', row.observations||'—']
+      return [fmtDate(row.date), row.plate, row.model, dep, ret, row.driver||'—', row.passengers||'—', row.observations||'—']
     }
     case 'providers':
       return [row.entry_time ? `${fmtDate(row.entry_time)} ${fmtTime(row.entry_time)}` : '—', row.name, row.company||'—', row.reason||'—', row.employee_name||'—', fmtTime(row.entry_time), fmtTime(row.exit_time)]
