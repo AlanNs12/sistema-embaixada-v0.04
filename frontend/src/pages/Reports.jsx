@@ -31,7 +31,7 @@ const PDF_CONFIG = {
   corLinhaAlternada: [239, 246, 255],
 
   // Texto do rodapé de cada página. Use null para não exibir.
-  rodape: 'Documento gerado automaticamente pelo Sistema de Acompanhamento da Portaria',
+  rodape: 'Documento gerado automaticamente pelo Sistema de Gestão da Portaria',
 
   // Orientação: 'landscape' (horizontal) ou 'portrait' (vertical)
   orientacao: 'landscape',
