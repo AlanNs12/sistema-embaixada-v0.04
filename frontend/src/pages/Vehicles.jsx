@@ -86,7 +86,7 @@ export default function Vehicles() {
     }
     try {
       await api.put(`/vehicles/logs/${returnModal.id}`, { return_time: returnTime, return_date: returnDate })
-      toast.success('Retorno registrado!'); setReturnModal(null); load()
+      toast.success('Retorno registrado!'); setReturnModal(null); setReturnTime(format(new Date(), 'HH:mm')); setReturnDate(format(new Date(), 'yyyy-MM-dd')); load()
     } catch (e) { toast.error(e.response?.data?.error || 'Erro') }
   }
 
@@ -95,6 +95,11 @@ export default function Vehicles() {
       await api.put(`/vehicles/logs/${obsModal.id}`, { observations: obsText })
       toast.success('Observação salva!'); setObsModal(null); load()
     } catch (e) { toast.error('Erro') }
+  }
+
+  const openDepartureModal = () => {
+    setForm(f => ({ ...f, departure_time: format(new Date(), 'HH:mm') }))
+    setModalOpen(true)
   }
 
   const openReturnModal = (v) => {
@@ -112,7 +117,7 @@ export default function Vehicles() {
         </div>
         <div className="flex items-center gap-3">
           <input type="date" className="input w-auto" value={date} onChange={e => setDate(e.target.value)} />
-          {canEdit && <button onClick={() => setModalOpen(true)} className="btn-primary"><Plus size={16} /> Registrar Saída</button>}
+          {canEdit && <button onClick={openDepartureModal} className="btn-primary"><Plus size={16} /> Registrar Saída</button>}
         </div>
       </div>
 
@@ -186,8 +191,8 @@ export default function Vehicles() {
       </div>
 
       {/* New departure modal */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Registrar Saída de Veículo"
-        footer={<><button onClick={() => setModalOpen(false)} className="btn-secondary">Cancelar</button><button onClick={handleSubmit} className="btn-primary">Registrar</button></>}>
+      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setForm(f => ({ ...f, departure_time: format(new Date(), 'HH:mm') })) }} title="Registrar Saída de Veículo"
+        footer={<><button onClick={() => { setModalOpen(false); setForm(f => ({ ...f, departure_time: format(new Date(), 'HH:mm') })) }} className="btn-secondary">Cancelar</button><button onClick={handleSubmit} className="btn-primary">Registrar</button></>}>
         <div className="space-y-4">
           <div className="form-group">
             <label className="label">Veículo *</label>
