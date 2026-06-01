@@ -30,3 +30,4 @@ scripts/backups/*.sql.gz
 *.zip
 .claude/worktrees/pensive-kare-98223d/
 backend/.env.example
+CHANGELOG-sprint-veiculos.md
