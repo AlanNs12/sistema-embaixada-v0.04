@@ -13,7 +13,8 @@ backend/.env.example
 frontend/.env.local
 frontend/.env.*.local
 frontend/.env.local
-frontend/package-lock.json
+package-lock.json
+package.json
 
 # ── Build do frontend ─────────────────────────────────────────
 frontend/dist/
