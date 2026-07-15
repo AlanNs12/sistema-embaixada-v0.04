@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import api from '../../api'
 import toast from 'react-hot-toast'
 import Modal from '../../components/Modal'
@@ -7,6 +8,9 @@ import { Plus, Pencil, Users, GripVertical } from 'lucide-react'
 const empty = { name: '', position: '', department: '', email: '', phone: '', active: true }
 
 export default function AdminEmployees() {
+  const { t } = useTranslation('admin')
+  const { t: tc } = useTranslation('common')
+
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -21,7 +25,7 @@ export default function AdminEmployees() {
     try {
       const res = await api.get('/employees')
       setEmployees(res.data)
-    } catch (e) { toast.error('Erro ao carregar') }
+    } catch (e) { toast.error(tc('error_loading')) }
     finally { setLoading(false) }
   }
 
@@ -31,14 +35,14 @@ export default function AdminEmployees() {
   const openEdit = (emp) => { setEditing(emp); setForm({ ...emp }); setModalOpen(true) }
 
   const handleSubmit = async () => {
-    if (!form.name) return toast.error('Nome é obrigatório')
+    if (!form.name) return toast.error(t('admin_employees_toast_name_required'))
     try {
       if (editing) await api.put(`/employees/${editing.id}`, form)
       else await api.post('/employees', form)
-      toast.success(editing ? 'Funcionário atualizado!' : 'Funcionário cadastrado!')
+      toast.success(editing ? t('admin_employees_toast_updated') : t('admin_employees_toast_created'))
       setModalOpen(false)
       load()
-    } catch (e) { toast.error(e.response?.data?.error || 'Erro') }
+    } catch (e) { toast.error(e.response?.data?.error || tc('error_generic')) }
   }
 
   // ── Drag-and-drop ──────────────────────────────────────────────
@@ -71,9 +75,9 @@ export default function AdminEmployees() {
       await api.put('/employees/reorder', {
         order: reordered.map((emp, i) => ({ id: emp.id, sort_order: i }))
       })
-      toast.success('Ordem salva!')
+      toast.success(t('admin_employees_toast_order_saved'))
     } catch (e) {
-      toast.error('Erro ao salvar ordem')
+      toast.error(t('admin_employees_toast_order_error'))
       load()
     }
   }
@@ -93,17 +97,17 @@ export default function AdminEmployees() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Funcionários da Embaixada</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Cadastro e gestão dos funcionários</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('admin_employees_title')}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{t('admin_employees_subtitle')}</p>
         </div>
-        <button onClick={openNew} className="btn-primary"><Plus size={16} /> Novo Funcionário</button>
+        <button onClick={openNew} className="btn-primary"><Plus size={16} /> {t('admin_employees_new')}</button>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        <input className="input max-w-xs" placeholder="Buscar por nome ou setor..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="input max-w-xs" placeholder={t('admin_employees_search')} value={search} onChange={e => setSearch(e.target.value)} />
         {isDragging && (
           <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-            <GripVertical size={13} /> Arraste as linhas para reordenar
+            <GripVertical size={13} /> {t('admin_employees_drag_hint')}
           </p>
         )}
       </div>
@@ -113,14 +117,20 @@ export default function AdminEmployees() {
           <thead>
             <tr>
               {isDragging && <th className="w-8"></th>}
-              <th>Nome</th><th>Cargo</th><th>Setor</th><th>Email</th><th>Telefone</th><th>Status</th><th>Ações</th>
+              <th>{t('admin_employees_column_name')}</th>
+              <th>{t('admin_employees_column_position')}</th>
+              <th>{t('admin_employees_column_department')}</th>
+              <th>{t('admin_employees_column_email')}</th>
+              <th>{t('admin_employees_column_phone')}</th>
+              <th>{t('admin_employees_column_status')}</th>
+              <th>{t('admin_employees_column_actions')}</th>
             </tr>
           </thead>
           <tbody>
             {loading
-              ? <tr><td colSpan={isDragging ? 8 : 7} className="text-center py-8 text-gray-400">Carregando...</td></tr>
+              ? <tr><td colSpan={isDragging ? 8 : 7} className="text-center py-8 text-gray-400">{tc('loading')}</td></tr>
               : filtered.length === 0
-              ? <tr><td colSpan={isDragging ? 8 : 7} className="text-center py-8 text-gray-400">Nenhum funcionário encontrado</td></tr>
+              ? <tr><td colSpan={isDragging ? 8 : 7} className="text-center py-8 text-gray-400">{t('admin_employees_empty')}</td></tr>
               : filtered.map((emp, index) => (
                 <tr
                   key={emp.id}
@@ -138,13 +148,13 @@ export default function AdminEmployees() {
                     </td>
                   )}
                   <td><p className="font-medium dark:text-white">{emp.name}</p></td>
-                  <td className="text-sm text-gray-600 dark:text-gray-300">{emp.position || '—'}</td>
-                  <td className="text-sm text-gray-600 dark:text-gray-300">{emp.department || '—'}</td>
-                  <td className="text-sm text-gray-500 dark:text-gray-400">{emp.email || '—'}</td>
-                  <td className="text-sm font-mono dark:text-gray-300">{emp.phone || '—'}</td>
-                  <td>{emp.active ? <span className="badge-green">Ativo</span> : <span className="badge-red">Inativo</span>}</td>
+                  <td className="text-sm text-gray-600 dark:text-gray-300">{emp.position || '\u2014'}</td>
+                  <td className="text-sm text-gray-600 dark:text-gray-300">{emp.department || '\u2014'}</td>
+                  <td className="text-sm text-gray-500 dark:text-gray-400">{emp.email || '\u2014'}</td>
+                  <td className="text-sm font-mono dark:text-gray-300">{emp.phone || '\u2014'}</td>
+                  <td>{emp.active ? <span className="badge-green">{tc('status_active')}</span> : <span className="badge-red">{tc('status_inactive')}</span>}</td>
                   <td>
-                    <button onClick={() => openEdit(emp)} className="btn-secondary btn-sm"><Pencil size={13} /> Editar</button>
+                    <button onClick={() => openEdit(emp)} className="btn-secondary btn-sm"><Pencil size={13} /> {tc('edit')}</button>
                   </td>
                 </tr>
               ))}
@@ -152,39 +162,39 @@ export default function AdminEmployees() {
         </table>
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Editar Funcionário' : 'Novo Funcionário'}
-        footer={<><button onClick={() => setModalOpen(false)} className="btn-secondary">Cancelar</button><button onClick={handleSubmit} className="btn-primary">Salvar</button></>}>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? t('admin_employees_modal_edit') : t('admin_employees_modal_new')}
+        footer={<><button onClick={() => setModalOpen(false)} className="btn-secondary">{tc('cancel')}</button><button onClick={handleSubmit} className="btn-primary">{tc('save')}</button></>}>
         <div className="space-y-4">
           <div className="form-group">
-            <label className="label">Nome Completo *</label>
+            <label className="label">{t('admin_employees_field_name')}</label>
             <input className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="form-group">
-              <label className="label">Cargo</label>
+              <label className="label">{t('admin_employees_field_position')}</label>
               <input className="input" value={form.position || ''} onChange={e => setForm({ ...form, position: e.target.value })} />
             </div>
             <div className="form-group">
-              <label className="label">Setor / Departamento</label>
+              <label className="label">{t('admin_employees_field_department')}</label>
               <input className="input" value={form.department || ''} onChange={e => setForm({ ...form, department: e.target.value })} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="form-group">
-              <label className="label">Email</label>
+              <label className="label">{t('admin_employees_field_email')}</label>
               <input type="email" className="input" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} />
             </div>
             <div className="form-group">
-              <label className="label">Telefone</label>
+              <label className="label">{t('admin_employees_field_phone')}</label>
               <input className="input" value={form.phone || ''} onChange={e => setForm({ ...form, phone: e.target.value })} />
             </div>
           </div>
           {editing && (
             <div className="form-group">
-              <label className="label">Status</label>
+              <label className="label">{t('admin_employees_field_status')}</label>
               <select className="input" value={form.active ? 'true' : 'false'} onChange={e => setForm({ ...form, active: e.target.value === 'true' })}>
-                <option value="true">Ativo</option>
-                <option value="false">Inativo</option>
+                <option value="true">{tc('status_active')}</option>
+                <option value="false">{tc('status_inactive')}</option>
               </select>
             </div>
           )}

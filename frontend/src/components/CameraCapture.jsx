@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Camera } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function CameraCapture({ onCapture, onClose }) {
+  const { t } = useTranslation('common')
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!window.isSecureContext) {
-      setError('O acesso à câmera requer HTTPS. Contate o administrador do sistema.')
+      setError(t('camera_error_https'))
       return
     }
 
@@ -24,18 +26,18 @@ export default function CameraCapture({ onCapture, onClose }) {
       })
       .catch(err => {
         if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
-          setError('Permissão de câmera negada. Permita o acesso e tente novamente.')
+          setError(t('camera_denied_simple'))
         } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
-          setError('Nenhuma câmera encontrada neste dispositivo.')
+          setError(t('camera_error_not_found'))
         } else {
-          setError('Não foi possível acessar a câmera. Verifique as permissões.')
+          setError(t('camera_error_permissions'))
         }
       })
 
     return () => {
       streamRef.current?.getTracks().forEach(t => t.stop())
     }
-  }, [])
+  }, [t])
 
   const handleCapture = () => {
     const video = videoRef.current
@@ -66,7 +68,7 @@ export default function CameraCapture({ onCapture, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
             <Camera size={18} className="text-blue-600" />
-            <h2 className="font-semibold text-gray-900 dark:text-white">Tirar Foto</h2>
+            <h2 className="font-semibold text-gray-900 dark:text-white">{t('take_photo_title')}</h2>
           </div>
           <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
             <X size={18} />
@@ -90,10 +92,10 @@ export default function CameraCapture({ onCapture, onClose }) {
               onClick={handleCapture}
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
-              <Camera size={16} /> Capturar Foto
+              <Camera size={16} /> {t('capture_photo')}
             </button>
           )}
-          <button onClick={handleClose} className="btn-secondary w-full">Cancelar</button>
+          <button onClick={handleClose} className="btn-secondary w-full">{t('cancel')}</button>
         </div>
       </div>
     </div>,

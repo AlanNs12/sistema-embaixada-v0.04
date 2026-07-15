@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import Modal from './Modal'
 import api from '../api'
 
 export default function ChangePasswordModal({ open, onClose }) {
+  const { t } = useTranslation('auth')
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
@@ -12,11 +14,11 @@ export default function ChangePasswordModal({ open, onClose }) {
 
   const validate = () => {
     const e = {}
-    if (!form.currentPassword) e.currentPassword = 'Informe a senha atual'
+    if (!form.currentPassword) e.currentPassword = t('password_required')
     if (form.newPassword.length < 8 || form.newPassword.length > 128)
-      e.newPassword = 'A nova senha deve ter entre 8 e 128 caracteres'
+      e.newPassword = t('password_min_length')
     if (form.confirmPassword !== form.newPassword)
-      e.confirmPassword = 'As senhas não coincidem'
+      e.confirmPassword = t('passwords_dont_match')
     return e
   }
 
@@ -26,15 +28,15 @@ export default function ChangePasswordModal({ open, onClose }) {
     setLoading(true)
     try {
       await api.put('/auth/password', form)
-      toast.success('Senha alterada com sucesso!')
+      toast.success(t('password_changed'))
       setForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setErrors({})
       onClose()
     } catch (err) {
       if (err.response?.status === 401) {
-        setErrors({ currentPassword: 'Senha atual incorreta' })
+        setErrors({ currentPassword: t('current_password_wrong') })
       } else {
-        toast.error(err.response?.data?.error || 'Erro ao alterar senha')
+        toast.error(err.response?.data?.error || t('error_changing_password'))
       }
     } finally {
       setLoading(false)
@@ -48,27 +50,27 @@ export default function ChangePasswordModal({ open, onClose }) {
   }
 
   const fields = [
-    { key: 'currentPassword', label: 'Senha atual' },
-    { key: 'newPassword',     label: 'Nova senha' },
-    { key: 'confirmPassword', label: 'Confirmar nova senha' },
+    { key: 'currentPassword', labelKey: 'current_password' },
+    { key: 'newPassword',     labelKey: 'new_password' },
+    { key: 'confirmPassword', labelKey: 'confirm_password' },
   ]
 
   return (
-    <Modal open={open} onClose={handleClose} title="Alterar senha"
+    <Modal open={open} onClose={handleClose} title={t('change_password')}
       footer={
         <div className="flex gap-2 justify-end">
-          <button onClick={handleClose} className="btn-secondary">Cancelar</button>
+          <button onClick={handleClose} className="btn-secondary">{t('cancel', { ns: 'common' })}</button>
           <button onClick={handleSubmit} disabled={loading} className="btn-primary">
-            {loading ? 'Salvando…' : 'Alterar senha'}
+            {loading ? t('saving') : t('change_password')}
           </button>
         </div>
       }
     >
       <div className="space-y-4">
-        {fields.map(({ key, label }) => (
+        {fields.map(({ key, labelKey }) => (
           <div key={key}>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {label}
+              {t(labelKey)}
             </label>
             <input
               type="password"
