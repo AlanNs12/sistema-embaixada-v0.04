@@ -2,30 +2,26 @@ import { useEffect, useRef, useState } from 'react'
 import api from '../api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
+import { useTranslation } from 'react-i18next'
 import Modal from '../components/Modal'
 import DetailModal from '../components/DetailModal'
 import CameraCapture from '../components/CameraCapture'
 import { Plus, LogOut, UserCheck, Eye, Search, History, Camera, Image } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
-// Converte data-URL (base64) em objeto File para reenvio via multipart
 function dataUrlToFile(dataUrl, filename, mimeType) {
   const base64 = dataUrl.split(',')[1]
   const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
   return new File([bytes], filename || 'documento.jpg', { type: mimeType || 'image/jpeg' })
 }
 
-const fmtDate = (v) => {
-  if (!v) return ''
-  try {
-    const s = typeof v === 'string' ? v.substring(0, 10) : new Date(v).toISOString().substring(0, 10)
-    const [y, m, d] = s.split('-')
-    return `${d}/${m}/${y}`
-  } catch { return '' }
-}
-
 export default function Visitors() {
+  const { t, i18n } = useTranslation('visitors')
+  const { t: tc } = useTranslation('common')
   const { canEdit } = useAuth()
+  const dateLocale = i18n.language === 'en-US' ? enUS : ptBR
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [data, setData] = useState({ visitors: [], currently_inside: [] })
   const [employees, setEmployees] = useState([])
@@ -42,12 +38,18 @@ export default function Visitors() {
   const [searchResults, setSearchResults] = useState([])
   const searchTimeout = useRef(null)
 
+  const fmtDate = (v) => {
+    if (!v) return ''
+    try { return format(new Date(v), 'P', { locale: dateLocale }) }
+    catch { return '' }
+  }
+
   const load = async () => {
     setLoading(true)
     try {
       const [visRes, empRes] = await Promise.all([api.get(`/visitors?date=${date}`), api.get('/employees')])
       setData(visRes.data); setEmployees(empRes.data)
-    } catch (e) { toast.error('Erro ao carregar') }
+    } catch (e) { toast.error(tc('error_loading')) }
     finally { setLoading(false) }
   }
   useEffect(() => { load() }, [date])
@@ -81,7 +83,6 @@ export default function Visitors() {
       notes: '',
     })
     setSearchQuery(''); setSearchResults([])
-    // Tenta carregar a foto do documento da visita mais recente
     setPhoto(null); setPhotoPreview(null); setPhotoFromPrevious(false)
     if (v.id) {
       try {
@@ -97,39 +98,39 @@ export default function Visitors() {
   }
 
   const handleSubmit = async () => {
-    if (!form.visitor_name) return toast.error('Nome do visitante obrigatório')
+    if (!form.visitor_name) return toast.error(t('toast_name_required'))
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => v && fd.append(k, v))
     if (photo) fd.append('document_photo', photo)
     try {
       await api.post('/visitors', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-      toast.success('Entrada registrada!')
+      toast.success(t('toast_entrance_registered'))
       closeModal(); load()
-    } catch (e) { toast.error(e.response?.data?.error || 'Erro') }
+    } catch (e) { toast.error(e.response?.data?.error || tc('error_generic')) }
   }
 
   const handleExit = async (id) => {
-    try { await api.put(`/visitors/${id}`, {}); toast.success('Saída registrada!'); load() }
-    catch (e) { toast.error('Erro') }
+    try { await api.put(`/visitors/${id}`, {}); toast.success(t('toast_exit_registered')); load() }
+    catch (e) { toast.error(tc('error_generic')) }
   }
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Visitantes</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Controle geral de visitantes</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{t('subtitle')}</p>
         </div>
         <div className="flex gap-3">
           <input type="date" className="input w-auto" value={date} onChange={e => setDate(e.target.value)} />
-          {canEdit && <button onClick={() => { setModalOpen(true); setSearchQuery(''); setSearchResults([]) }} className="btn-primary"><Plus size={16} /> Registrar Entrada</button>}
+          {canEdit && <button onClick={() => { setModalOpen(true); setSearchQuery(''); setSearchResults([]) }} className="btn-primary"><Plus size={16} /> {t('register_entry')}</button>}
         </div>
       </div>
 
       {data.currently_inside.length > 0 && (
         <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-xl p-4">
           <p className="text-sm font-medium text-teal-800 dark:text-teal-300 mb-2 flex items-center gap-2">
-            <UserCheck size={16} /> {data.currently_inside.length} visitante(s) na embaixada agora
+            <UserCheck size={16} /> {t('visitors_inside_now', { count: data.currently_inside.length })}
           </p>
           <div className="flex flex-wrap gap-2">
             {data.currently_inside.map(v => (
@@ -140,7 +141,7 @@ export default function Visitors() {
                 </div>
                 {canEdit && (
                   <button onClick={() => handleExit(v.id)} className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1 ml-2">
-                    <LogOut size={12} /> Saída
+                    <LogOut size={12} /> {t('exit_action')}
                   </button>
                 )}
               </div>
@@ -152,13 +153,13 @@ export default function Visitors() {
       <div className="table-container">
         <table className="table">
           <thead>
-            <tr><th>Visitante</th><th>Documento</th><th>Motivo</th><th>Funcionário</th><th>Entrada</th><th>Saída</th><th>Status</th><th></th></tr>
+            <tr><th>{t('column_visitor')}</th><th>{t('column_document')}</th><th>{t('column_reason')}</th><th>{t('column_employee')}</th><th>{t('column_entry')}</th><th>{t('column_exit')}</th><th>{t('column_status')}</th><th></th></tr>
           </thead>
           <tbody>
             {loading
-              ? <tr><td colSpan={8} className="text-center py-8 text-gray-400">Carregando...</td></tr>
+              ? <tr><td colSpan={8} className="text-center py-8 text-gray-400">{tc('loading')}</td></tr>
               : data.visitors.length === 0
-              ? <tr><td colSpan={8} className="text-center py-8 text-gray-400">Nenhum visitante nesta data</td></tr>
+              ? <tr><td colSpan={8} className="text-center py-8 text-gray-400">{t('empty_no_visitors')}</td></tr>
               : data.visitors.map(v => (
                 <tr key={v.id}>
                   <td>
@@ -172,13 +173,13 @@ export default function Visitors() {
                   <td className="font-mono text-xs dark:text-gray-300">{v.exit_time ? format(new Date(v.exit_time), 'HH:mm') : '—'}</td>
                   <td>
                     {v.exit_time
-                      ? <span className="badge-gray">Saiu</span>
+                      ? <span className="badge-gray">{t('status_left')}</span>
                       : canEdit
-                      ? <button onClick={() => handleExit(v.id)} className="badge-red cursor-pointer hover:bg-red-200 text-xs">Reg. saída</button>
-                      : <span className="badge-green">Dentro</span>}
+                      ? <button onClick={() => handleExit(v.id)} className="badge-red cursor-pointer hover:bg-red-200 text-xs">{t('status_reg_exit')}</button>
+                      : <span className="badge-green">{t('status_inside')}</span>}
                   </td>
                   <td>
-                    <button onClick={() => setDetail(v)} className="btn-secondary btn-sm" title="Ver detalhes">
+                    <button onClick={() => setDetail(v)} className="btn-secondary btn-sm" title={tc('view_details')}>
                       <Eye size={13} />
                     </button>
                   </td>
@@ -188,20 +189,20 @@ export default function Visitors() {
         </table>
       </div>
 
-      <Modal open={modalOpen} onClose={closeModal} title="Registrar Entrada de Visitante"
-        footer={<><button onClick={closeModal} className="btn-secondary">Cancelar</button><button onClick={handleSubmit} className="btn-primary">Registrar</button></>}>
+      <Modal open={modalOpen} onClose={closeModal} title={t('modal_title')}
+        footer={<><button onClick={closeModal} className="btn-secondary">{tc('cancel')}</button><button onClick={handleSubmit} className="btn-primary">{tc('register')}</button></>}>
         <div className="space-y-4">
 
           {/* ── Busca de visita anterior ─────────────────────── */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3">
             <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-1">
-              <History size={13} /> Buscar visita anterior (preenche o formulário automaticamente)
+              <History size={13} /> {t('search_previous')}
             </p>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               <input
                 className="input pl-8 text-sm"
-                placeholder="Nome ou número do documento..."
+                placeholder={t('search_placeholder')}
                 value={searchQuery}
                 onChange={e => handleSearch(e.target.value)}
               />
@@ -218,7 +219,7 @@ export default function Visitors() {
                     <p className="text-sm font-medium dark:text-white">{r.visitor_name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {r.document_number && <span className="font-mono">{r.document_number} · </span>}
-                      Última visita: {fmtDate(r.date)}
+                      {t('search_last_visit', { date: fmtDate(r.date) })}
                       {r.employee_name && <span> · {r.employee_name}</span>}
                     </p>
                   </button>
@@ -226,31 +227,31 @@ export default function Visitors() {
               </div>
             )}
             {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
-              <p className="text-xs text-gray-400 mt-1 text-center">Nenhuma visita anterior encontrada</p>
+              <p className="text-xs text-gray-400 mt-1 text-center">{t('search_none_found')}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="form-group"><label className="label">Nome Completo *</label>
+            <div className="form-group"><label className="label">{t('field_name_required')}</label>
               <input className="input" value={form.visitor_name} onChange={e => setForm({ ...form, visitor_name: e.target.value })} /></div>
-            <div className="form-group"><label className="label">Nº Documento</label>
-              <input className="input" placeholder="RG, CPF, Passaporte..." value={form.document_number} onChange={e => setForm({ ...form, document_number: e.target.value })} /></div>
+            <div className="form-group"><label className="label">{t('field_document')}</label>
+              <input className="input" placeholder={t('placeholder_document')} value={form.document_number} onChange={e => setForm({ ...form, document_number: e.target.value })} /></div>
           </div>
-          <div className="form-group"><label className="label">Motivo da Visita</label>
+          <div className="form-group"><label className="label">{t('field_visit_reason')}</label>
             <textarea className="input" rows={2} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} /></div>
-          <div className="form-group"><label className="label">Funcionário a Visitar</label>
+          <div className="form-group"><label className="label">{t('field_employee_to_visit')}</label>
             <select className="input" value={form.employee_id} onChange={e => setForm({ ...form, employee_id: e.target.value })}>
-              <option value="">Selecione...</option>
+              <option value="">{tc('select_option')}</option>
               {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
             </select></div>
           <div className="form-group">
-            <label className="label">Foto do Documento</label>
+            <label className="label">{t('field_document_photo')}</label>
             {photoPreview && (
               <div className="relative inline-block mb-2">
                 <img src={photoPreview} alt="doc" className="h-24 rounded-lg object-cover border" />
                 {photoFromPrevious && (
                   <span className="absolute top-1 left-1 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
-                    visita anterior
+                    {t('photo_previous_badge')}
                   </span>
                 )}
                 <button
@@ -267,14 +268,14 @@ export default function Visitors() {
                 onClick={() => setCameraOpen(true)}
                 className="btn-secondary flex items-center gap-2 text-sm"
               >
-                <Camera size={16} /> Tirar Foto
+                <Camera size={16} /> {t('take_photo')}
               </button>
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
                 className="btn-secondary flex items-center gap-2 text-sm"
               >
-                <Image size={16} /> Buscar da Galeria
+                <Image size={16} /> {t('browse_gallery')}
               </button>
             </div>
             <input
@@ -289,10 +290,10 @@ export default function Visitors() {
               className="hidden"
             />
             <p className="text-xs text-gray-400 mt-1">
-              {photo ? 'Foto selecionada' : photoFromPrevious ? 'Foto da visita anterior' : 'Tire uma foto ou escolha da galeria'}
+              {photo ? t('photo_selected') : photoFromPrevious ? t('photo_previous') : t('photo_help')}
             </p>
           </div>
-          <div className="form-group"><label className="label">Observações</label>
+          <div className="form-group"><label className="label">{t('field_notes')}</label>
             <input className="input" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
         </div>
       </Modal>

@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { Shield, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import logo from '../../public/images/logo-emblem.png';
 
 export default function Login() {
+  const { t } = useTranslation('auth')
   const { login } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', password: '' })
@@ -19,7 +21,7 @@ export default function Login() {
       await login(form.email, form.password)
       navigate('/')
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao fazer login')
+      toast.error(err.response?.data?.error || t('error_login'))
     } finally {
       setLoading(false)
     }
@@ -32,29 +34,29 @@ export default function Login() {
           <div className="flex items-center justify-center mx-auto mb-4">
             <img src={logo} alt="Logo" className="w-18 h-24 object-cover" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 text-gray-900">Gestão Portaria</h1>
-          <p className="text-gray-500 text-sm mt-1">Embassy of the Phillipines in Brazil</p>
+          <h1 className="text-2xl font-bold text-gray-900 text-gray-900">{t('system_title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('system_subtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="form-group">
-            <label className="label">Email</label>
+            <label className="label">{t('email_label')}</label>
             <input
               type="email"
               className="input"
-              placeholder="seu@email.com"
+              placeholder={t('email_placeholder')}
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
             />
           </div>
           <div className="form-group">
-            <label className="label">Senha</label>
+            <label className="label">{t('password_label')}</label>
             <div className="relative">
               <input
                 type={showPw ? 'text' : 'password'}
                 className="input pr-10"
-                placeholder="••••••••"
+                placeholder={t('password_placeholder')}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 required
@@ -69,7 +71,7 @@ export default function Login() {
             </div>
           </div>
           <button type="submit" className="btn-primary w-full justify-center py-2.5" disabled={loading}>
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? t('logging_in') : t('login')}
           </button>
         </form>
       </div>

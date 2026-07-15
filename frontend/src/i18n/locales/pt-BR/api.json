@@ -1,0 +1,5 @@
+{
+  "error_unauthorized": "Acesso não autorizado",
+  "error_not_found": "Registro não encontrado",
+  "error_server": "Erro interno do servidor"
+}
