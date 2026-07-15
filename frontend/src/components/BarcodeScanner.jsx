@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { NotFoundException } from '@zxing/library'
 import { X, Camera, RefreshCw } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function BarcodeScanner({ onScan, onClose }) {
+  const { t } = useTranslation('common')
   const videoRef = useRef(null)
   const readerRef = useRef(null)
   const controlsRef = useRef(null)
@@ -13,40 +15,34 @@ export default function BarcodeScanner({ onScan, onClose }) {
   const [error, setError] = useState(null)
   const [scanning, setScanning] = useState(false)
 
-  // Solicita permissão explicitamente e lista as câmeras disponíveis
   useEffect(() => {
     if (!window.isSecureContext) {
-      setError('O acesso à câmera requer HTTPS. Contate o administrador do sistema.')
+      setError(t('camera_error_https'))
       return
     }
 
-    // Solicita permissão via getUserMedia antes de enumerar dispositivos
-    // Isso garante que o popup de permissão do navegador seja exibido
     navigator.mediaDevices
       .getUserMedia({ video: true })
       .then(stream => {
-        // Encerra o stream temporário — só precisávamos da permissão
         stream.getTracks().forEach(t => t.stop())
         return BrowserMultiFormatReader.listVideoInputDevices()
       })
       .then(devices => {
         setCameras(devices)
-        // Prefere câmera traseira em mobile
         const back = devices.find(d => /back|rear|environment/i.test(d.label))
         setSelectedCamera((back || devices[0])?.deviceId || null)
       })
       .catch(err => {
         if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
-          setError('Permissão de câmera negada. Clique no ícone de câmera 🔒 na barra de endereço, permita o acesso e recarregue a página.')
+          setError(t('camera_error_denied'))
         } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
-          setError('Nenhuma câmera encontrada neste dispositivo.')
+          setError(t('camera_error_not_found'))
         } else {
-          setError('Não foi possível acessar a câmera. Verifique as permissões do navegador.')
+          setError(t('camera_error_generic'))
         }
       })
-  }, [])
+  }, [t])
 
-  // Inicia/reinicia o scanner sempre que a câmera selecionada muda
   useEffect(() => {
     if (!selectedCamera || !videoRef.current) return
 
@@ -64,16 +60,16 @@ export default function BarcodeScanner({ onScan, onClose }) {
           onScan(code)
         }
         if (err && !(err instanceof NotFoundException)) {
-          setError('Erro ao ler código. Reposicione a câmera.')
+          setError(t('camera_error_read'))
         }
       })
       .catch(err => {
         if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
-          setError('Permissão de câmera negada. Clique no ícone de câmera 🔒 na barra de endereço, permita o acesso e recarregue a página.')
+          setError(t('camera_error_denied'))
         } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
-          setError('Nenhuma câmera encontrada neste dispositivo.')
+          setError(t('camera_error_not_found'))
         } else {
-          setError('Não foi possível acessar a câmera. Verifique as permissões do navegador.')
+          setError(t('camera_error_generic'))
         }
         setScanning(false)
       })
@@ -81,37 +77,32 @@ export default function BarcodeScanner({ onScan, onClose }) {
     return () => {
       controlsRef.current?.stop()
     }
-  }, [selectedCamera])
+  }, [selectedCamera, t])
 
   const handleClose = () => {
     controlsRef.current?.stop()
     onClose()
   }
 
-  // createPortal renderiza o scanner direto no document.body,
-  // ficando acima de qualquer modal independentemente de z-index
   return createPortal(
     <div
       className="fixed inset-0 flex items-center justify-center bg-black/80"
       style={{ zIndex: 9999 }}
     >
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
             <Camera size={18} className="text-blue-600" />
-            <h2 className="font-semibold text-gray-900 dark:text-white">Escanear Código de Barras</h2>
+            <h2 className="font-semibold text-gray-900 dark:text-white">{t('scanner_title')}</h2>
           </div>
           <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
             <X size={18} />
           </button>
         </div>
 
-        {/* Camera view */}
         <div className="relative bg-black" style={{ aspectRatio: '4/3' }}>
           <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
 
-          {/* Mira central */}
           {!error && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="relative w-56 h-32">
@@ -124,7 +115,6 @@ export default function BarcodeScanner({ onScan, onClose }) {
             </div>
           )}
 
-          {/* Erro */}
           {error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
               <Camera size={36} className="text-gray-500" />
@@ -133,10 +123,9 @@ export default function BarcodeScanner({ onScan, onClose }) {
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-5 py-4 space-y-3">
           <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-            Aponte a câmera para o código de barras da encomenda
+            {t('scanner_hint')}
           </p>
 
           {cameras.length > 1 && (
@@ -148,13 +137,15 @@ export default function BarcodeScanner({ onScan, onClose }) {
                 onChange={e => setSelectedCamera(e.target.value)}
               >
                 {cameras.map(c => (
-                  <option key={c.deviceId} value={c.deviceId}>{c.label || `Câmera ${c.deviceId.slice(0, 6)}`}</option>
+                  <option key={c.deviceId} value={c.deviceId}>
+                    {c.label || t('scanner_camera_label', { id: c.deviceId.slice(0, 6) })}
+                  </option>
                 ))}
               </select>
             </div>
           )}
 
-          <button onClick={handleClose} className="btn-secondary w-full">Cancelar</button>
+          <button onClick={handleClose} className="btn-secondary w-full">{t('cancel')}</button>
         </div>
       </div>
     </div>,

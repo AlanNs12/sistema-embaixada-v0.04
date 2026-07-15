@@ -1,0 +1,7 @@
+{
+  "required_field": "Campo obrigatório",
+  "invalid_email": "Email inválido",
+  "min_length": "Mínimo {{min}} caracteres",
+  "max_length": "Máximo {{max}} caracteres",
+  "passwords_dont_match": "As senhas não coincidem"
+}

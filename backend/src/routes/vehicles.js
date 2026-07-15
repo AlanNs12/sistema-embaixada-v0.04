@@ -81,19 +81,30 @@ router.post('/logs',
     if (!vehicle_id || !departure_time) return res.status(400).json({ error: 'Veículo e horário de saída são obrigatórios' });
     const d = date || new Date().toISOString().split('T')[0];
     try {
+      await pool.query('BEGIN');
+
       const open = await pool.query(
-        'SELECT id FROM vehicle_logs WHERE vehicle_id=$1 AND return_time IS NULL LIMIT 1',
+        'SELECT id FROM vehicle_logs WHERE vehicle_id=$1 AND return_time IS NULL ORDER BY id DESC LIMIT 1',
         [vehicle_id]
       );
-      if (open.rows.length > 0)
+      if (open.rows.length > 0) {
+        await pool.query('ROLLBACK');
         return res.status(409).json({ error: 'Este veículo já possui uma saída em aberto. Registre o retorno antes de cadastrar uma nova saída.' });
+      }
 
       const result = await pool.query(
         `INSERT INTO vehicle_logs (vehicle_id,date,departure_time,driver,passengers,reason,observations,created_by)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
         [vehicle_id, d, departure_time, driver, passengers, reason, observations, req.user.id]);
+
+      await pool.query('COMMIT');
       res.status(201).json(result.rows[0]);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+      await pool.query('ROLLBACK').catch(() => {});
+      if (err.code === '23505' && err.constraint === 'idx_vehicle_logs_one_open_per_vehicle')
+        return res.status(409).json({ error: 'Este veículo já possui uma saída em aberto. Registre o retorno antes de cadastrar uma nova saída.' });
+      res.status(500).json({ error: err.message });
+    }
   }
 );
 

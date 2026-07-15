@@ -170,6 +170,8 @@ CREATE TABLE IF NOT EXISTS vehicle_logs (
 
 CREATE INDEX IF NOT EXISTS idx_vlog_date       ON vehicle_logs (date);
 CREATE INDEX IF NOT EXISTS idx_vlog_return_null ON vehicle_logs (return_time) WHERE return_time IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicle_logs_one_open_per_vehicle
+  ON vehicle_logs (vehicle_id) WHERE return_time IS NULL;
 
 
 -- ─────────────────────────────────────────────────────────────
