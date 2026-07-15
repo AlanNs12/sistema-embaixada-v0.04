@@ -119,7 +119,16 @@ export default function Vehicles() {
         </div>
         <div className="flex items-center gap-3">
           <input type="date" className="input w-auto" value={date} onChange={e => setDate(e.target.value)} />
-          {canEdit && <button onClick={openDepartureModal} className="btn-primary"><Plus size={16} /> {t('register_exit')}</button>}
+{canEdit && (
+  <button
+    onClick={openDepartureModal}
+    disabled={loading}
+    className="btn-primary"
+  >
+    <Plus size={16} />
+    {t('register_exit')}
+  </button>
+)}
         </div>
       </div>
 

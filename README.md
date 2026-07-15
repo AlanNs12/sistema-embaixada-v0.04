@@ -214,12 +214,15 @@ O arquivo [database/schema.sql](database/schema.sql) contém o schema completo c
 Scripts para atualizar bancos já existentes:
 
 ```bash
+# Executar migrações pendentes em ordem numérica
 psql -U postgres -d embassy_db -f backend/src/migrations/001_sort_order_return_date.sql
+psql -U postgres -d embassy_db -f backend/src/migrations/002_prevent_duplicate_open_vehicle_logs.sql
 ```
 
 | Arquivo | O que faz |
 |---------|-----------|
 | `001_sort_order_return_date.sql` | Adiciona `sort_order` em `employees` e `return_date` em `vehicle_logs` |
+| `002_prevent_duplicate_open_vehicle_logs.sql` | Adiciona índice único parcial para impedir dois logs abertos para o mesmo veículo |
 
 ---
 
